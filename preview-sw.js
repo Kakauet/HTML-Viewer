@@ -7,7 +7,66 @@ const sessionPersistenceStates = new Map();
 const PROJECT_SESSION_DB = 'html-viewer-preview-sessions';
 const PROJECT_SESSION_STORE = 'sessions';
 const PROJECT_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+// Which session each preview page belongs to. Pages show their published URL
+// after loading, so this mapping must survive the worker being restarted.
+const PROJECT_CLIENT_DB = 'html-viewer-preview-clients';
+const PROJECT_CLIENT_STORE = 'clients';
 let lastPersistentSessionPrune = 0;
+
+function openProjectClientDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(PROJECT_CLIENT_DB, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(PROJECT_CLIENT_STORE)) {
+        request.result.createObjectStore(PROJECT_CLIENT_STORE, { keyPath: 'clientId' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Preview client database unavailable'));
+  });
+}
+
+async function withProjectClientStore(mode, operation) {
+  const database = await openProjectClientDatabase();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = database.transaction(PROJECT_CLIENT_STORE, mode);
+      let result;
+      Promise.resolve(operation(transaction.objectStore(PROJECT_CLIENT_STORE))).then(value => { result = value; }, reject);
+      transaction.oncomplete = () => resolve(result);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  } finally {
+    database.close();
+  }
+}
+
+function persistProjectClient(clientId, sessionId) {
+  return withProjectClientStore('readwrite', store => {
+    store.put({ clientId, sessionId, updatedAt: Date.now() });
+  }).catch(() => {});
+}
+
+function readPersistedProjectClient(clientId) {
+  return withProjectClientStore('readonly', store => new Promise(resolve => {
+    const request = store.get(clientId);
+    request.onsuccess = () => resolve(request.result?.sessionId || null);
+    request.onerror = () => resolve(null);
+  })).catch(() => null);
+}
+
+function pruneProjectClients(now = Date.now()) {
+  return withProjectClientStore('readwrite', store => {
+    const request = store.openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      if (now - (Number(cursor.value?.updatedAt) || 0) > PROJECT_SESSION_MAX_AGE_MS) cursor.delete();
+      cursor.continue();
+    };
+  }).catch(() => {});
+}
 
 function openProjectSessionDatabase() {
   return new Promise((resolve, reject) => {
@@ -158,7 +217,8 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(Promise.all([
     self.clients.claim(),
-    prunePersistentSessions().catch(() => {})
+    prunePersistentSessions().catch(() => {}),
+    pruneProjectClients()
   ]));
 });
 
@@ -297,6 +357,15 @@ function parseByteRange(rangeHeader, size) {
     return null;
   }
   return { start, end: Math.min(end, size - 1) };
+}
+
+// Shown when a full-page window outlives the editor session it belonged to.
+function responseForMissingSession(request) {
+  const body = '<!doctype html><meta charset="utf-8"><meta name="html-viewer-missing-session" content="1"><title>HTML Viewer</title><p>Preview not available.</p>';
+  return new Response(request?.method === 'HEAD' ? null : body, {
+    status: 404,
+    headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' }
+  });
 }
 
 function responseForFile(file, request = null, status = 200) {
@@ -538,19 +607,26 @@ async function getSessionFromClient(event) {
   if (knownSessionId) return knownSessionId;
 
   const client = await self.clients.get(clientId);
-  if (!client || !client.url) return null;
-
-  const parsed = parseProjectUrl(new URL(client.url));
-  if (!parsed) return null;
-  projectClientSessions.set(clientId, parsed.sessionId);
-  return parsed.sessionId;
+  const parsed = client?.url ? parseProjectUrl(new URL(client.url)) : null;
+  const sessionId = parsed?.sessionId || (client ? await readPersistedProjectClient(clientId) : null);
+  if (sessionId) projectClientSessions.set(clientId, sessionId);
+  return sessionId;
 }
 
 function rememberProjectClient(event, sessionId) {
   const clientId = event.resultingClientId || event.clientId;
-  if (clientId && sessionId) {
+  if (clientId && sessionId && projectClientSessions.get(clientId) !== sessionId) {
     projectClientSessions.set(clientId, sessionId);
+    if (event.resultingClientId) event.waitUntil(persistProjectClient(clientId, sessionId));
   }
+}
+
+// Only the editor may change preview sessions; previewed pages are clients of
+// this worker too and must not rewrite another session's files.
+function isProjectClient(source) {
+  if (!source?.id) return false;
+  if (projectClientSessions.has(source.id)) return true;
+  try { return Boolean(parseProjectUrl(new URL(source.url))); } catch { return false; }
 }
 
 self.addEventListener('message', event => {
@@ -559,6 +635,10 @@ self.addEventListener('message', event => {
   const reply = payload => {
     if (replyPort) replyPort.postMessage(payload);
   };
+  if (isProjectClient(event.source)) {
+    reply({ ok: false, error: 'Preview pages cannot change preview sessions' });
+    return;
+  }
 
   if (data.type === 'html-viewer:touch-project') {
     const sessionId = String(data.sessionId || '');
@@ -647,50 +727,49 @@ self.addEventListener('message', event => {
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET' && event.request.method !== 'HEAD') return;
+  const request = event.request;
+  const url = new URL(request.url);
+  // Other origins (CDNs, fonts, APIs) stay on the network untouched.
+  if (url.origin !== self.location.origin) return;
+  const isNavigation = request.mode === 'navigate' || ['document', 'iframe', 'frame'].includes(request.destination);
+  const readsFile = request.method === 'GET' || request.method === 'HEAD';
 
-  const url = new URL(event.request.url);
   const parsed = parseProjectUrl(url);
   if (parsed) {
+    // A static host answers a form POST to a page with that page.
+    if (!readsFile && !isNavigation) return;
     rememberProjectClient(event, parsed.sessionId);
     event.respondWith((async () => {
       const session = await getOrRestoreSession(parsed.sessionId);
-      if (!session) return responseForFile(null, event.request);
-      const path = parsed.path || 'index.html';
-      const route = resolveProjectRequestWithSpaFallback(session, path, event.request);
-      return responseForResolvedRoute(route, event.request, parsed.sessionId, url);
+      if (!session) return isNavigation ? responseForMissingSession(request) : responseForFile(null, request);
+      const fileRequest = readsFile ? request : new Request(request.url);
+      const route = resolveProjectRequestWithSpaFallback(session, parsed.path || 'index.html', request);
+      return responseForResolvedRoute(route, fileRequest, parsed.sessionId, url);
     })());
     return;
   }
 
-  if (!event.clientId) return;
+  if (!event.clientId || !readsFile) return;
 
   event.respondWith((async () => {
     const sessionId = await getSessionFromClient(event);
-    if (!sessionId) return fetch(event.request);
+    if (!sessionId) return fetch(request);
 
     const session = await getOrRestoreSession(sessionId);
-    if (!session) return fetch(event.request);
+    if (!session) return fetch(request);
 
-    if (url.origin !== self.location.origin) return fetch(event.request);
-
+    // A previewed page addresses its files with published URLs (`/img/a.png`).
+    // What the project lacks is a 404, as on a real host: the editor's own
+    // files are never served to it.
     const rootRelativePath = normalizePath(decodePath(url.pathname));
-    const route = resolveProjectRequestWithSpaFallback(
-      session,
-      rootRelativePath,
-      event.request,
-      { preferSiteRoot: true }
-    );
-    if (!route.file) return fetch(event.request);
-
-    if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    const route = resolveProjectRequestWithSpaFallback(session, rootRelativePath, request, { preferSiteRoot: true });
+    if (route.file && isNavigation) {
       const siteRoot = normalizePath(session.siteRoot || '');
       const redirectPath = siteRoot && rootRelativePath && !rootRelativePath.toLowerCase().startsWith(`${siteRoot.toLowerCase()}/`)
         ? joinPath(siteRoot, rootRelativePath)
         : (rootRelativePath || siteRoot || route.path);
       return Response.redirect(getProjectUrl(sessionId, redirectPath, url), 302);
     }
-
-    return responseForResolvedRoute(route, event.request, sessionId, url);
+    return responseForResolvedRoute(route, request, sessionId, url);
   })());
 });

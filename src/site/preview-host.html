@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  {{previewGuard}}
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>HTML Viewer</title>
+  <link rel="icon" href="favicon.ico">
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0d13; }
+    #preview-frame { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+    #preview-frame[hidden] { display: none; }
+    #preview-message { position: fixed; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; color: #94a3b8; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; }
+    #preview-message[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <p id="preview-message" role="status" hidden></p>
+  <iframe id="preview-frame" title="Preview" data-html-viewer-preview sandbox="{{previewSandbox}}" allow="{{previewAllow}}" hidden></iframe>
+  <script>
+    // Full-page view of a preview. The previewed page runs in a sandboxed
+    // frame with the same isolation as inside the editor, and this window
+    // drops its reference to the editor before any project code runs.
+    (() => {
+      'use strict';
+      const MARKER = '__html_viewer_project__';
+      const CONTROL = 'html-viewer-preview-control';
+      const DOCUMENT_KEY = 'html-viewer:full-page-document';
+      const SANDBOX = '{{previewSandbox}}';
+      const params = new URLSearchParams(location.search);
+      const lang = (params.get('lang') || navigator.language || '').toLowerCase().startsWith('es') ? 'es' : 'en';
+      const text = {
+        es: { loading: 'Preparando la página…', expired: 'Esta vista ya no está disponible. Ábrela de nuevo desde el editor.' },
+        en: { loading: 'Preparing the page…', expired: 'This view is no longer available. Open it again from the editor.' }
+      }[lang];
+      document.documentElement.lang = lang;
+
+      const editorWindow = window.opener;
+      try { window.opener = null; } catch {}
+      const frame = document.getElementById('preview-frame');
+      const message = document.getElementById('preview-message');
+      const show = value => {
+        message.textContent = value || '';
+        message.hidden = !value;
+      };
+      const appBase = new URL('.', location.href).pathname;
+      const namespaceRoot = `${appBase}${MARKER}/`;
+      const session = params.get('session') || '';
+
+      if (session) {
+        // Files: the page keeps its published URL (shown after `#`) while the
+        // preview worker serves it; history entries live in this window.
+        const encodePath = value => String(value || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+        const root = encodePath(params.get('root'));
+        const siteBase = new URL(`${namespaceRoot}${encodeURIComponent(session)}/${root ? `${root}/` : ''}`, location.origin);
+        const currentRoute = () => (location.hash.startsWith('#/') ? location.hash.slice(1) : '/');
+        const toProject = route => {
+          const url = new URL(route, location.origin);
+          const target = new URL(url.pathname.replace(/^\/+/, ''), siteBase);
+          target.search = url.search;
+          target.hash = url.hash;
+          return target.href;
+        };
+        const load = route => {
+          try { frame.contentWindow.location.replace(toProject(route)); }
+          catch { frame.src = toProject(route); }
+        };
+        const reflect = () => {
+          try {
+            const win = frame.contentWindow;
+            if (win.__htmlViewerPreview?.prettyPathname) {
+              const url = new URL(win.location.href);
+              if (url.origin === location.origin && !url.pathname.startsWith(namespaceRoot)) {
+                history.replaceState(history.state, '', `#${url.pathname}${url.search}${url.hash}`);
+              }
+            }
+            document.title = win.document.title || 'HTML Viewer';
+          } catch {}
+        };
+
+        frame.setAttribute('sandbox', `${SANDBOX} allow-same-origin`);
+        frame.hidden = false;
+        frame.src = toProject(currentRoute());
+
+        frame.addEventListener('load', () => {
+          try {
+            const win = frame.contentWindow;
+            if (!win.__htmlViewerPreview) {
+              if (win.document.querySelector('meta[name="html-viewer-missing-session"]')) {
+                frame.hidden = true;
+                show(text.expired);
+                return;
+              }
+              // The page navigated by itself to a URL outside the preview
+              // (a reload or `location.href = '/x'`): bring it back.
+              const url = new URL(win.location.href);
+              if (url.origin === location.origin && !url.pathname.startsWith(namespaceRoot)) {
+                load(`${url.pathname}${url.search}${url.hash}`);
+                return;
+              }
+            }
+          } catch {
+            // An external site: nothing to map.
+          }
+          reflect();
+        });
+
+        window.addEventListener('message', event => {
+          const data = event.data;
+          if (!data || data.channel !== CONTROL || event.source !== frame.contentWindow) return;
+          if (data.type === 'navigate' && typeof data.target === 'string') {
+            const url = new URL(data.target, location.href);
+            if (url.origin !== location.origin) return;
+            const route = `${url.pathname}${url.search}${url.hash}`;
+            history.pushState({ route }, '', `#${route}`);
+            load(route);
+          } else if (data.type === 'location') {
+            reflect();
+          }
+        });
+        window.addEventListener('popstate', () => load(currentRoute()));
+        return;
+      }
+
+      // Simple: the editor sends the document once; it is kept for reloads
+      // of this tab and rendered in an opaque origin.
+      const render = doc => {
+        frame.setAttribute('sandbox', SANDBOX);
+        frame.hidden = false;
+        show('');
+        document.title = doc.title || 'HTML Viewer';
+        frame.srcdoc = doc.html;
+      };
+      let stored = null;
+      try { stored = JSON.parse(sessionStorage.getItem(DOCUMENT_KEY) || 'null'); } catch {}
+      if (stored && typeof stored.html === 'string') {
+        render(stored);
+      } else if (editorWindow) {
+        show(text.loading);
+        window.addEventListener('message', event => {
+          const data = event.data;
+          if (event.source !== editorWindow || data?.type !== 'html-viewer:full-page-document' || typeof data.html !== 'string') return;
+          const doc = { html: data.html, title: String(data.title || '') };
+          try { sessionStorage.setItem(DOCUMENT_KEY, JSON.stringify(doc)); } catch {}
+          render(doc);
+        });
+        editorWindow.postMessage({ type: 'html-viewer:full-page-ready' }, location.origin === 'null' ? '*' : location.origin);
+      } else {
+        show(text.expired);
+      }
+    })();
+  </script>
+</body>
+</html>

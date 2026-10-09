@@ -1,25 +1,53 @@
-const previewNavigationObservedDocuments = new WeakSet();
+// Simple documents run in an opaque origin: they cannot reach the editor, its
+// storage or its databases. Files previews need the editor's origin because
+// only same-origin clients can be served by the preview service worker; their
+// runtime scopes storage and keeps navigation inside the project instead.
+function setPreviewFrameIsolation(sameOrigin) {
+  if (!previewIframe) return;
+  const sandbox = sameOrigin ? `${PREVIEW_SANDBOX_TOKENS} allow-same-origin` : PREVIEW_SANDBOX_TOKENS;
+  if (previewIframe.getAttribute('sandbox') !== sandbox) previewIframe.setAttribute('sandbox', sandbox);
+}
 
-function handlePreviewRuntimeReady(event) {
+// Messages the preview runtime sends about the user's interaction with the
+// page. They are only trusted from the iframe's current document.
+function handlePreviewControlMessage(event) {
   const message = event.data;
   if (
     !message ||
-    message.channel !== 'html-viewer-preview-diagnostic' ||
-    message.type !== 'ready' ||
-    event.source !== previewIframe?.contentWindow
+    message.channel !== 'html-viewer-preview-control' ||
+    !previewIframe ||
+    event.source !== previewIframe.contentWindow
   ) return;
 
-  const expectedToken = previewLifecycle.expectedNavigation?.token;
-  const activeToken = previewLifecycle.activeDiagnosticToken;
-  if (
-    String(message.renderToken || '') !== String(expectedToken || '') &&
-    String(message.renderToken || '') !== String(activeToken || '')
-  ) return;
-  bindPreviewNavigationObserver();
+  if (message.type === 'interaction') {
+    previewLastUserInteractionAt = performance.now();
+    previewShouldRestoreEditorFocus = false;
+  } else if (message.type === 'navigate') {
+    if (editorMode === 'split' && previewLifecycle.mode === 'project' && typeof message.target === 'string') {
+      navigatePreviewFromUserAction(message.target, { reason: message.recover ? 'recover' : 'link' });
+    }
+  } else if (message.type === 'location') {
+    if (editorMode !== 'split' || previewLifecycle.mode !== 'project' || previewLifecycle.expectedNavigation) return;
+    if (syncProjectPreviewNavigationState({ preferExpected: false })) {
+      const entryPath = normalizeProjectPath(getEntryFile()?.name || '');
+      setPreviewAwayFromHome(!isEntryProjectPreviewPath(previewLifecycle.projectPath || entryPath));
+    }
+  } else if (message.type === 'storage') {
+    if (previewLifecycle.mode === 'srcdoc') writePreviewDocumentStorage(message);
+  }
+}
+
+// Blob URLs belong to the editor's origin; an opaque document cannot load
+// them, so a Simple document that uses project files keeps that origin.
+let previewCodeUsesEditorBlobs = false;
+function trackEditorBlobUrl(url) {
+  if (typeof url === 'string' && url.startsWith('blob:')) previewCodeUsesEditorBlobs = true;
+  return url;
 }
 
 // Helper to get the current code to be rendered in the preview
 function getCurrentPreviewCode() {
+  previewCodeUsesEditorBlobs = false;
   if (!editor) return '';
   const rawContent = editorMode === 'unified'
     ? getCurrentEditorDocumentText()
@@ -36,7 +64,7 @@ function getCurrentPreviewCode() {
       const fileLookup = createProjectFileLookup();
       const resolver = (canonicalPath) => {
         const referencedFile = findFileByCanonicalPath(canonicalPath, fileLookup);
-        return ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup);
+        return trackEditorBlobUrl(ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup));
       };
 
       // Resolve paths inside the editor HTML using entryFile name as context
@@ -58,7 +86,7 @@ function getCurrentPreviewCode() {
     const fileLookup = createProjectFileLookup();
     const resolver = (canonicalPath) => {
       const referencedFile = findFileByCanonicalPath(canonicalPath, fileLookup);
-      return ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup);
+      return trackEditorBlobUrl(ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup));
     };
 
     // Resolve paths inside the entry HTML
@@ -177,12 +205,11 @@ function handlePreviewFrameLoad() {
     setPreviewAwayFromHome(true);
   }
 
-  bindPreviewNavigationObserver();
   restoreEditorFocusAfterPreviewLoad();
 }
 
 function ensureProjectPreviewNavigationScope(currentUrl) {
-  if (editorMode !== 'split' || previewLifecycle.mode !== 'project') return false;
+  if (!currentUrl || editorMode !== 'split' || previewLifecycle.mode !== 'project') return false;
   let current;
   try {
     current = new URL(currentUrl, location.href);
@@ -193,7 +220,7 @@ function ensureProjectPreviewNavigationScope(currentUrl) {
 
   const navigationUrl = getCompatiblePreviewNavigationUrl(current.href);
   if (!navigationUrl || previewUrlsMatch(navigationUrl, current.href)) return false;
-  const path = normalizeProjectPath(current.pathname);
+  const path = getProjectPathFromSitePathname(current.pathname);
   previewLifecycle.expectedNavigation = {
     mode: 'project',
     url: navigationUrl,
@@ -210,8 +237,10 @@ function ensureProjectPreviewNavigationScope(currentUrl) {
 function initPreviewLifecycle() {
   if (!previewIframe || previewLifecycle.initialized) return;
   previewLifecycle.initialized = true;
-  window.addEventListener('message', handlePreviewRuntimeReady);
+  window.addEventListener('message', handlePreviewControlMessage);
   previewIframe.addEventListener('load', handlePreviewFrameLoad);
+  prunePreviewStorageNamespaces();
+  setPreviewFrameIsolation(false);
 
   const initialToken = 'initial';
   const initialPreviewCode = applyNonDraggableImageGuard(
@@ -237,7 +266,7 @@ function navigatePreviewFromUserAction(urlValue, { reason = 'navigation' } = {})
 
   const isProjectDestination = editorMode === 'split' && destination.origin === location.origin;
   if (isProjectDestination) {
-    const targetPath = getProjectPreviewPathFromUrl(destination.href) || normalizeProjectPath(destination.pathname);
+    const targetPath = getProjectPreviewPathFromUrl(destination.href) || getProjectPathFromSitePathname(destination.pathname);
     setProjectPreviewLocation(destination.href, targetPath);
     setPreviewAwayFromHome(true);
     schedulePreviewUpdate({
@@ -261,91 +290,6 @@ function navigatePreviewFromUserAction(urlValue, { reason = 'navigation' } = {})
   return true;
 }
 
-function bindPreviewNavigationObserver() {
-  try {
-    const previewDocument = previewIframe?.contentDocument;
-    const previewWindow = previewIframe?.contentWindow;
-    if (!previewDocument || !previewWindow || previewNavigationObservedDocuments.has(previewDocument)) return;
-    previewNavigationObservedDocuments.add(previewDocument);
-
-    previewWindow.addEventListener('pointerdown', () => {
-      previewLastUserInteractionAt = performance.now();
-      previewShouldRestoreEditorFocus = false;
-    }, true);
-
-    // Window is the final bubbling target. Page-level delegated handlers have
-    // already had an opportunity to prevent the default navigation here.
-    previewWindow.addEventListener('click', (event) => {
-      if (editorMode !== 'split') return;
-      const link = event.composedPath?.().find(node => node?.matches?.('a[href]')) || event.target?.closest?.('a[href]');
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey ||
-        !link ||
-        (link.target && link.target !== '_self') ||
-        link.hasAttribute('download')
-      ) return;
-      const href = (link.getAttribute('href') || '').trim();
-      if (!href || href.startsWith('#') || href.toLowerCase().startsWith('javascript:')) return;
-
-      // Plain iframe navigations use replace so they do not grow the joint
-      // session history of the main application. The observer is attached on
-      // load, after page scripts have registered their own click handlers.
-      event.preventDefault();
-      navigatePreviewFromUserAction(link.href, { reason: 'link' });
-    });
-
-    previewWindow.addEventListener('submit', (event) => {
-      // Simple previews keep native browser navigation and form behavior.
-      // Files mode needs this bridge only to map same-origin routes into the
-      // virtual project service-worker namespace.
-      if (editorMode !== 'split') return;
-      const form = event.target;
-      if (
-        event.defaultPrevented ||
-        !(form instanceof previewWindow.HTMLFormElement) ||
-        (form.target && form.target !== '_self')
-      ) return;
-
-      const submitter = event.submitter;
-      const method = String(submitter?.formMethod || form.method || 'get').toLowerCase();
-      const target = submitter?.formTarget || form.target || '_self';
-      if (target && target !== '_self') return;
-      if (method !== 'get') {
-        invalidatePreviewLifecycle('form-navigation', { preserveLocation: true });
-        setPreviewAwayFromHome(true);
-        return;
-      }
-
-      // `HTMLButtonElement.formAction` is surprisingly sensitive to a
-      // document `<base>` and can fall back to the current page even when
-      // the form has its own action. Read the authored attribute first so
-      // `<button formaction>` and ordinary form actions stay distinct.
-      const authoredSubmitterAction = submitter?.getAttribute?.('formaction');
-      const authoredFormAction = form.getAttribute('action') || form.action || previewWindow.location.href;
-      const originalUrl = new URL(
-        authoredSubmitterAction || authoredFormAction,
-        previewWindow.location.href
-      );
-      const navigationUrl = getCompatiblePreviewNavigationUrl(originalUrl.href);
-      event.preventDefault();
-      const destination = new URL(navigationUrl);
-      const formData = new previewWindow.FormData(form, event.submitter || undefined);
-      for (const [name, value] of formData) {
-        if (typeof value === 'string') destination.searchParams.append(name, value);
-      }
-      navigatePreviewFromUserAction(destination.href, { reason: 'form-get' });
-    });
-  } catch {
-    // Cross-origin destinations cannot be inspected after navigation; the load
-    // state fallback still keeps the home action available.
-  }
-}
-
 function getCompatiblePreviewNavigationUrl(urlValue) {
   let destination;
   try {
@@ -355,14 +299,8 @@ function getCompatiblePreviewNavigationUrl(urlValue) {
   }
   if (editorMode !== 'split' || destination.origin !== location.origin) return destination.href;
   if (getProjectPreviewPathFromUrl(destination.href)) return destination.href;
-
-  const virtualUrl = new URL(
-    getProjectPreviewUrl(normalizeProjectPath(destination.pathname), projectPreviewVersion)
-  );
-  virtualUrl.search = destination.search;
-  virtualUrl.hash = destination.hash;
-  virtualUrl.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(projectPreviewVersion));
-  return virtualUrl.href;
+  // A published-style URL such as `/servicios/x` is relative to the site root.
+  return getProjectPreviewUrlForSiteUrl(destination.href, projectPreviewVersion);
 }
 
 function returnPreviewToHome() {
@@ -406,30 +344,39 @@ function setPreviewStatus(label, state = 'idle') {
 function getEmptyPreviewColors() {
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
   return isDark
-    ? { background: '#1e1e24', text: '#9ca3af' }
-    : { background: '#ffffff', text: '#64748b' };
+    ? { background: '#0b0d13', text: '#94a3b8', title: '#e2e8f0', accent: '#8842FD', ring: 'rgba(136,66,253,.14)' }
+    : { background: '#ffffff', text: '#64748b', title: '#0f172a', accent: '#7334ec', ring: 'rgba(136,66,253,.10)' };
 }
 
+// An empty message renders the default "start here" hint; a specific
+// message (e.g. an empty project) is shown on its own.
 function createEmptyProjectPreviewCode(message = EMPTY_PROJECT_PREVIEW_MESSAGE) {
-  const { background, text } = getEmptyPreviewColors();
-  const safeMessage = String(message || '').replace(/[&<>"']/g, (char) => ({
+  const { background, text, title, accent, ring } = getEmptyPreviewColors();
+  const escape = value => String(value || '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;'
   }[char]));
+  const content = message
+    ? `<p class="hint">${escape(message)}</p>`
+    : `<div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg></div><p class="title">${escape(t('preview_empty_title'))}</p><p class="hint">${escape(t('preview_empty_hint'))}</p>`;
 
   return `<!doctype html>
 <html data-html-viewer-empty-preview>
 <head>
 <meta charset="utf-8">
 <style>
-html,body{min-height:100%;margin:0;background:${background};color:${text};}
-body{display:grid;place-items:center;font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+html,body{min-height:100%;height:100%;margin:0;background:${background};color:${text};}
+body{display:grid;place-items:center;font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;user-select:none;}
+main{max-width:320px;padding:24px;text-align:center;}
+.mark{display:inline-grid;place-items:center;width:44px;height:44px;margin-bottom:14px;border-radius:12px;background:${ring};color:${accent};}
+.title{margin:0 0 6px;color:${title};font-size:15px;font-weight:600;}
+.hint{margin:0;}
 </style>
 </head>
-<body>${safeMessage ? `<div>${safeMessage}</div>` : ''}</body>
+<body><main>${content}</main></body>
 </html>`;
 }
 
@@ -452,6 +399,10 @@ function restoreEditorFocusAfterPreviewLoad() {
   const restore = () => {
     if (!editor) return;
     if (previewLastUserInteractionAt >= scheduledAt) return;
+    // Only recover focus the preview load took away; never pull it back from
+    // a control the user moved to meanwhile (explorer, toolbar, dialogs...).
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== previewIframe && !editorHasKeyboardFocus()) return;
     if (monacoLoaded && typeof editor.focus === 'function') {
       editor.focus();
     } else if (fallbackTextarea) {
@@ -666,6 +617,7 @@ function renderSrcdocPreviewNow(rawCode, request) {
     reason: request.reason
   };
   window.clearPreviewDiagnostics?.();
+  setPreviewFrameIsolation(!isEmpty && previewCodeUsesEditorBlobs);
   previewIframe.removeAttribute('src');
   previewIframe.srcdoc = code;
 }
@@ -728,10 +680,12 @@ function getProjectPreviewTargetUrl(request, targetPath) {
   return url.href;
 }
 
-function navigatePreviewFrameToUrl(url) {
+function navigatePreviewFrameToUrl(url, { push = false } = {}) {
+  setPreviewFrameIsolation(true);
   previewIframe.removeAttribute('srcdoc');
   try {
-    previewIframe.contentWindow.location.replace(url);
+    if (push) previewIframe.contentWindow.location.assign(url);
+    else previewIframe.contentWindow.location.replace(url);
   } catch {
     previewIframe.src = url;
   }
@@ -812,7 +766,9 @@ async function renderProjectPreviewNow(request) {
     reason: request.reason
   };
   window.clearPreviewDiagnostics?.();
-  navigatePreviewFrameToUrl(targetUrl);
+  // Following a link adds a history entry, so `history.back()` in the page
+  // returns to the previous page; edits and recoveries replace the document.
+  navigatePreviewFrameToUrl(targetUrl, { push: request.reason === 'link' });
 }
 
 function renderPreviewNow(request = null) {
@@ -870,21 +826,26 @@ function syncEditorZoomGutter() {
   if (!monacoLoaded || !editor || typeof editor.getLayoutInfo !== 'function') return;
 
   const isMobile = window.innerWidth <= 768;
+  // Apply the gutter options first: measuring before they change (e.g. when
+  // the window crosses the mobile breakpoint) leaves the code column narrower
+  // than the centered line numbers, which then overlap the code.
+  editor.updateOptions({
+    lineNumbersMinChars: isMobile ? 2 : 3,
+    folding: !isMobile
+  });
+
   const layoutInfo = editor.getLayoutInfo();
   const options = editor.getRawOptions?.();
   const currentDecorationsWidth = Number(options?.lineDecorationsWidth) || 0;
   const fixedGutterWidth = layoutInfo.contentLeft - currentDecorationsWidth;
   const nextDecorationsWidth = Math.max(0, Math.round(EDITOR_CONTENT_LEFT - fixedGutterWidth));
 
-  editor.updateOptions({
-    lineNumbersMinChars: isMobile ? 2 : 3,
-    folding: !isMobile
-  });
-
   if (nextDecorationsWidth !== currentDecorationsWidth) {
     editor.updateOptions({ lineDecorationsWidth: nextDecorationsWidth });
   }
 }
+
+let showEditorZoomIndicator = () => {};
 
 function initEditorWheelZoom() {
   const editorContainer = document.getElementById('editor-container');
@@ -907,6 +868,7 @@ function initEditorWheelZoom() {
     }, 900);
   };
 
+  showEditorZoomIndicator = showZoomIndicator;
   syncEditorTypographyVariables();
   editorContainer.addEventListener('wheel', (event) => {
     if (!event.ctrlKey || event.deltaY === 0) return;
@@ -1492,6 +1454,34 @@ function triggerFocusMode() {
   if (btn) btn.click();
 }
 
+// Ctrl/Cmd with +, - or 0 zooms the code editor while it has focus, matching
+// the shortcuts listed in Help. Elsewhere the browser keeps its page zoom.
+function handleEditorZoomShortcut(event) {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey || !editorHasKeyboardFocus()) return false;
+  let nextSize = null;
+  if (event.key === '+' || event.key === '=' || event.code === 'NumpadAdd') nextSize = editorFontSize + 1;
+  else if (event.key === '-' || event.key === '_' || event.code === 'NumpadSubtract') nextSize = editorFontSize - 1;
+  else if (event.key === '0' || event.code === 'Numpad0') nextSize = EDITOR_DEFAULT_FONT_SIZE;
+  if (nextSize === null) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  setEditorFontSize(nextSize);
+  showEditorZoomIndicator();
+  return true;
+}
+
+// Inputs such as file names keep their native undo; the app history only
+// owns the code editor and the rest of the interface.
+function isNativeTextEditingTarget(target) {
+  if (!(target instanceof Element) || target === fallbackTextarea) return false;
+  // Monaco's own text surface is the "inputarea"; its find/rename widgets
+  // are ordinary inputs with their own undo.
+  if (target.closest('.monaco-editor') && target.classList.contains('inputarea')) return false;
+  return Boolean(target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]'));
+}
+
+window.addEventListener('keydown', handleEditorZoomShortcut, true);
+
 // Global keyboard shortcuts
 window.addEventListener('keydown', (e) => {
   const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -1526,7 +1516,7 @@ window.addEventListener('keydown', (e) => {
 // Interceptar Deshacer (Ctrl+Z) y Rehacer (Ctrl+Y / Ctrl+Shift+Z) en fase de captura para anular Monaco
 window.addEventListener('keydown', (e) => {
   const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-  if (isCtrlOrCmd) {
+  if (isCtrlOrCmd && !e.altKey && !isNativeTextEditingTarget(e.target)) {
     const key = e.key.toLowerCase();
     if (key === 'z') {
       if (e.shiftKey) {

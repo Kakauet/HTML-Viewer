@@ -43,21 +43,21 @@ let currentLocale = document.documentElement.lang === 'es' ? 'es' : 'en';
 const TRANSLATIONS = {
   es: {
     "sidebar_preview": "Página completa",
-    "sidebar_focus": "Modo Enfoque",
-    "sidebar_import": "Importar Proyecto",
+    "sidebar_focus": "Modo enfoque",
+    "sidebar_import": "Importar proyecto",
     "sidebar_export": "Exportar HTML",
-    "sidebar_sample": "Cargar Ejemplo",
-    "sidebar_clear": "Limpiar Todo",
-    "sidebar_mode_dark": "Modo Oscuro",
-    "sidebar_mode_light": "Modo Claro",
+    "sidebar_sample": "Cargar ejemplo",
+    "sidebar_clear": "Limpiar todo",
+    "sidebar_mode_dark": "Modo oscuro",
+    "sidebar_mode_light": "Modo claro",
     "cat_view": "Vista",
     "cat_file": "Archivo",
     "cat_file_unified": "Documento",
     "cat_file_split": "Proyecto",
     "sidebar_import_unified": "Importar HTML",
-    "sidebar_import_split": "Importar Proyecto",
+    "sidebar_import_split": "Importar proyecto",
     "sidebar_export_unified": "Descargar HTML",
-    "sidebar_export_split": "Exportar Proyecto",
+    "sidebar_export_split": "Exportar proyecto",
     "cat_actions": "Acciones",
     "mobile_code": "Código",
     "mobile_view": "Vista",
@@ -116,18 +116,18 @@ const TRANSLATIONS = {
     "drag_title_html": "Suelta para abrir HTML",
     "drag_desc_files": "El archivo se añadirá al proyecto automáticamente",
     "drag_desc_main": "La importación se abrirá como contenido principal",
-    "export_title": "Exportar Proyecto",
+    "export_title": "Exportar proyecto",
     "export_subtitle": "Elige el formato de salida para guardar tu código",
-    "export_local_title": "Carpeta Local",
+    "export_local_title": "Carpeta local",
     "export_local_desc": "Guarda los archivos directamente en una carpeta local (requiere soporte de navegador)",
-    "export_local_unsupported": "No Soportado",
+    "export_local_unsupported": "No compatible",
     "export_zip_title": "Archivo ZIP",
     "export_zip_desc": "Empaqueta todos los archivos virtuales en un archivo comprimido .zip descargable",
     "export_unified_title": "Exportar como HTML único",
     "export_unified_desc": "Compila y une todos los archivos en un único HTML listo para producción",
     "toast_offline_mode": "Modo sin conexión activado (editor básico)",
     "toast_popup_blocked": "El navegador bloqueó la ventana emergente",
-    "toast_project_opened_virtual": "Proyecto abierto como URL virtual",
+    "toast_project_opened_virtual": "Proyecto abierto a página completa",
     "toast_full_page_opened": "Visualización a página completa abierta",
     "toast_page_open_error": "Error al abrir la página",
     "toast_sample_loaded": "Código de ejemplo cargado",
@@ -136,12 +136,12 @@ const TRANSLATIONS = {
     "toast_files_added": "{count} archivo(s) añadidos",
     "toast_file_exported_as": "Archivo exportado como {name}",
     "toast_export_error": "Error al exportar el archivo",
-    "toast_jszip_not_loaded": "La librería JSZip no está cargada. Comprueba tu conexión a Internet.",
+    "toast_jszip_not_loaded": "No se pudo cargar el módulo ZIP. Recarga la página e inténtalo de nuevo.",
     "toast_project_exported_zip": "Proyecto exportado como ZIP: {name}",
     "toast_zip_generate_error": "Error al generar el archivo ZIP",
     "toast_local_export_unsupported": "Tu navegador no soporta la exportación a carpeta local.",
     "toast_local_export_success": "Proyecto exportado con éxito a la carpeta local",
-    "toast_export_cancelled": "Exportación cancelada por el usuario",
+    "toast_export_cancelled": "Exportación cancelada",
     "toast_folder_export_error": "Error al exportar a carpeta: {message}",
     "toast_html_imported": "Archivo HTML importado: {name}",
     "toast_html_read_error": "Error al leer el archivo HTML",
@@ -178,7 +178,49 @@ const TRANSLATIONS = {
     "default_file_name": "archivo",
     "imported_project_name": "proyecto-importado",
     "sidebar_about": "Ayuda",
-    "about_title": "Ayuda"
+    "about_title": "Ayuda",
+    "explorer_title": "Explorador",
+    "close_dialog": "Cerrar",
+    "resize_panels": "Cambiar el tamaño de los paneles",
+    "toast_undo": "Deshacer",
+    "preview_ready": "Listo",
+    "preview_empty_title": "La vista previa aparecerá aquí",
+    "preview_empty_hint": "Escribe HTML en el editor, carga el ejemplo o arrastra un archivo .html o .zip.",
+    "zoom_in": "Acercar",
+    "zoom_out": "Alejar",
+    "zoom_reset": "Restablecer zoom",
+    "console_title": "Diagnóstico",
+    "console_open": "Abrir consola de diagnóstico",
+    "console_close": "Cerrar consola",
+    "console_clear": "Limpiar",
+    "console_resize": "Cambiar la altura de la consola",
+    "console_filters": "Filtrar diagnósticos",
+    "console_filter_all": "Todos",
+    "console_filter_resource": "Recursos",
+    "console_filter_route": "Rutas",
+    "console_filter_cors": "CORS/red",
+    "console_none": "Sin problemas",
+    "console_count_one": "1 problema",
+    "console_count_other": "{count} problemas",
+    "console_button_title": "Consola de diagnóstico: {summary}",
+    "console_empty": "No se han detectado problemas.",
+    "console_empty_filtered": "No hay problemas de este tipo.",
+    "diag_error": "JavaScript",
+    "diag_warning": "Aviso",
+    "diag_resource": "Recurso",
+    "diag_route": "Ruta",
+    "diag_cors": "CORS/red",
+    "diag_generic": "Diagnóstico",
+    "diag_hint_cors": "El servidor remoto puede estar bloqueando la petición. Revisa Access-Control-Allow-Origin y la URL.",
+    "diag_hint_route": "Comprueba que la ruta exista y que respete mayúsculas, carpetas y extensión.",
+    "diag_hint_resource": "Comprueba la ruta del archivo y que el recurso esté incluido en el proyecto.",
+    "diag_resource_failed": "No se pudo cargar el recurso",
+    "diag_js_error": "Error de JavaScript",
+    "diag_unhandled_rejection": "Promesa rechazada sin gestionar",
+    "diag_service_worker_disabled": "La vista previa no ejecuta service workers del proyecto.",
+    "preview_viewing": "Viendo",
+    "full_page_loading": "Preparando la página…",
+    "full_page_expired": "Esta vista ya no está disponible. Ábrela de nuevo desde el editor."
   },
   en: {
     "sidebar_preview": "Full Page",
@@ -266,7 +308,7 @@ const TRANSLATIONS = {
     "export_unified_desc": "Compile and merge all files into a single HTML ready for production",
     "toast_offline_mode": "Offline mode activated (basic editor)",
     "toast_popup_blocked": "The browser blocked the pop-up window",
-    "toast_project_opened_virtual": "Project opened as virtual URL",
+    "toast_project_opened_virtual": "Project opened in full page",
     "toast_full_page_opened": "Full page preview opened",
     "toast_page_open_error": "Error opening page",
     "toast_sample_loaded": "Sample code loaded",
@@ -275,12 +317,12 @@ const TRANSLATIONS = {
     "toast_files_added": "{count} file(s) added",
     "toast_file_exported_as": "File exported as {name}",
     "toast_export_error": "Error exporting file",
-    "toast_jszip_not_loaded": "The JSZip library is not loaded. Check your Internet connection.",
+    "toast_jszip_not_loaded": "The ZIP module could not be loaded. Reload the page and try again.",
     "toast_project_exported_zip": "Project exported as ZIP: {name}",
     "toast_zip_generate_error": "Error generating ZIP file",
     "toast_local_export_unsupported": "Your browser does not support local folder export.",
     "toast_local_export_success": "Project successfully exported to local folder",
-    "toast_export_cancelled": "Export cancelled by user",
+    "toast_export_cancelled": "Export cancelled",
     "toast_folder_export_error": "Error exporting to folder: {message}",
     "toast_html_imported": "HTML file imported: {name}",
     "toast_html_read_error": "Error reading HTML file",
@@ -317,7 +359,49 @@ const TRANSLATIONS = {
     "default_file_name": "file",
     "imported_project_name": "imported-project",
     "sidebar_about": "Help",
-    "about_title": "Help"
+    "about_title": "Help",
+    "explorer_title": "Explorer",
+    "close_dialog": "Close",
+    "resize_panels": "Resize panels",
+    "toast_undo": "Undo",
+    "preview_ready": "Ready",
+    "preview_empty_title": "Your preview will appear here",
+    "preview_empty_hint": "Write HTML in the editor, load the example or drop an .html or .zip file.",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "zoom_reset": "Reset zoom",
+    "console_title": "Diagnostics",
+    "console_open": "Open diagnostics console",
+    "console_close": "Close console",
+    "console_clear": "Clear",
+    "console_resize": "Resize console",
+    "console_filters": "Filter diagnostics",
+    "console_filter_all": "All",
+    "console_filter_resource": "Resources",
+    "console_filter_route": "Routes",
+    "console_filter_cors": "CORS/network",
+    "console_none": "No issues",
+    "console_count_one": "1 issue",
+    "console_count_other": "{count} issues",
+    "console_button_title": "Diagnostics console: {summary}",
+    "console_empty": "No issues detected.",
+    "console_empty_filtered": "No issues of this type.",
+    "diag_error": "JavaScript",
+    "diag_warning": "Warning",
+    "diag_resource": "Resource",
+    "diag_route": "Route",
+    "diag_cors": "CORS/network",
+    "diag_generic": "Diagnostic",
+    "diag_hint_cors": "The remote server may be blocking the request. Check Access-Control-Allow-Origin and the URL.",
+    "diag_hint_route": "Check that the route exists and matches letter case, folders and extension.",
+    "diag_hint_resource": "Check the file path and that the resource is included in the project.",
+    "diag_resource_failed": "The resource could not be loaded",
+    "diag_js_error": "JavaScript error",
+    "diag_unhandled_rejection": "Unhandled promise rejection",
+    "diag_service_worker_disabled": "The preview does not run the project's service workers.",
+    "preview_viewing": "Viewing",
+    "full_page_loading": "Preparing the page…",
+    "full_page_expired": "This view is no longer available. Open it again from the editor."
   }
 };
 
@@ -448,7 +532,8 @@ const DEFAULT_SAMPLE_CODE_EN = `<!DOCTYPE html>
 
 const DEFAULT_SAMPLE_CODE = currentLocale === 'es' ? DEFAULT_SAMPLE_CODE_ES : DEFAULT_SAMPLE_CODE_EN;
 
-const PREVIEW_IDLE_LABEL = currentLocale === 'es' ? 'Activo' : 'Active';
+// An unchanged re-render keeps the same visible state as a completed load.
+const PREVIEW_IDLE_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_RENDERING_LABEL = currentLocale === 'es' ? 'Renderizando' : 'Rendering';
 const PREVIEW_READY_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_NOT_FOUND_LABEL = currentLocale === 'es' ? 'No encontrado' : 'Not found';
@@ -473,6 +558,11 @@ window.addEventListener('resize', updateEditorContentLeft);
 const HISTORY_DEBOUNCE_MS = 250;
 const MAX_TOASTS = 3;
 const PROJECT_PREVIEW_PREFIX = '__html_viewer_project__';
+// Full-page host: shows a preview in a sandboxed frame of its own window.
+const PREVIEW_HOST_PAGE = 'preview.html';
+// Capabilities granted to previewed pages. `allow-same-origin` is added only
+// for Files, whose pages must be served by the preview service worker.
+const PREVIEW_SANDBOX_TOKENS = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation';
 const PROJECT_PREVIEW_VERSION_PARAM = '__html_viewer_version';
 const PROJECT_PREVIEW_SW_VERSION = '20260811-1';
 const PROJECT_PREVIEW_SW_URL = new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, APP_ROOT_URL).href;
@@ -491,8 +581,9 @@ const previewIframe = document.getElementById('preview-iframe');
 const editorPlaceholder = document.getElementById('editor-placeholder');
 const previewStatus = document.getElementById('preview-status');
 
-// Toast Notification Helper
-function showToast(message, type = 'success') {
+// Toast Notification Helper. An optional action (e.g. Undo) keeps the toast
+// visible a little longer and dismisses it once used.
+function showToast(message, type = 'success', { action = null } = {}) {
   const container = document.getElementById('toast-container');
   if (!container) return;
 
@@ -508,6 +599,7 @@ function showToast(message, type = 'success') {
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
   const iconName = type === 'success' ? 'check-circle' : (type === 'error' ? 'alert-circle' : 'info');
   const icon = document.createElement('i');
@@ -516,20 +608,70 @@ function showToast(message, type = 'success') {
   text.textContent = message;
   toast.append(icon, text);
 
+  let hideTimeout = 0;
+  const dismiss = () => {
+    clearTimeout(hideTimeout);
+    if (!toast.parentNode || toast.classList.contains('hide')) return;
+    toast.classList.add('hide');
+    setTimeout(() => {
+      toast.remove();
+    }, 350);
+  };
+
+  if (action?.label && typeof action.onClick === 'function') {
+    const actionButton = document.createElement('button');
+    actionButton.type = 'button';
+    actionButton.className = 'toast-action';
+    actionButton.textContent = action.label;
+    actionButton.addEventListener('click', () => {
+      dismiss();
+      action.onClick();
+    }, { once: true });
+    toast.appendChild(actionButton);
+  }
+
   container.appendChild(toast);
   if (window.lucide) {
     lucide.createIcons();
   }
 
-  // Hide and remove
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.classList.add('hide');
-      setTimeout(() => {
-        toast.remove();
-      }, 350);
+  // Keep the toast while the pointer rests on it, so actions stay reachable.
+  const duration = action ? 6000 : 3000;
+  const scheduleHide = () => {
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(dismiss, duration);
+  };
+  toast.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+  toast.addEventListener('mouseleave', scheduleHide);
+  scheduleHide();
+}
+
+// Shows a confirmation toast whose action reverts the step that was just
+// recorded. Later edits make the action a no-op instead of undoing them.
+function showUndoableToast(message, type = 'success') {
+  const expectedState = undoStack[undoStack.length - 1];
+  showToast(message, type, {
+    action: {
+      label: t('toast_undo'),
+      onClick: () => {
+        if (expectedState && undoStack[undoStack.length - 1] === expectedState) triggerUndo();
+      }
     }
-  }, 3000);
+  });
+}
+
+// Download a Blob without revoking its URL before slower browsers start the
+// transfer (Firefox/Safari can cancel a download whose URL is revoked at once).
+function downloadBlob(blob, filename) {
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(downloadUrl), 30000);
 }
 
 // App State
@@ -587,7 +729,7 @@ let unifiedModel;
 const fileModels = {}; // fileId -> monaco.editor.ITextModel
 
 const TEXT_EXTENSIONS = new Set([
-  'html', 'htm', 'css', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'json', 'map', 'webmanifest', 'md', 'txt', 'csv', 'yaml', 'yml', 'xml', 'svg'
+  'html', 'htm', 'xhtml', 'css', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'json', 'jsonld', 'geojson', 'gltf', 'map', 'webmanifest', 'md', 'txt', 'csv', 'yaml', 'yml', 'xml', 'rss', 'atom', 'vtt', 'svg'
 ]);
 const IMAGE_EXTENSIONS = new Set(['png', 'apng', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'avif', 'bmp']);
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'ogg', 'm4a']);

@@ -3,6 +3,7 @@
 <html lang="es" data-theme="dark" class="editor-page">
 <head>
   <meta charset="utf-8">
+  <script>(()=>{try{const f=window.frameElement;if(!f)return;const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\/$/,''),back=location.pathname.replace(/\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"><title>HTML Viewer</title><meta name="description" content="Editor de HTML, CSS y JavaScript con vista previa e importación de proyectos."><meta name="theme-color" content="#8842FD"><link rel="icon" href="../favicon.ico"><link rel="apple-touch-icon" href="../apple-touch-icon.png">
   <script>
     (() => {
@@ -85,11 +86,11 @@
     /* Minified layout.css inlined */
     :root{--workspace-edge: 16px;--workspace-panel-gap: 8px;--workspace-resizer-width: 16px;--editor-panel-min: 420px;--preview-panel-min: 420px;}.workspace-shell{--split-percent: var(--saved-split-percent, 55%);display: flex;align-items: stretch;min-width: 0;}.workspace-shell>.panel{margin-top: var(--workspace-edge);margin-bottom: var(--workspace-edge);}.workspace-shell>.panel--editor{flex: 0 1 var(--split-percent);min-width: var(--editor-panel-min);margin-left: var(--workspace-edge);margin-right: var(--workspace-panel-gap);}.workspace-shell>.workspace-resizer{flex: 0 0 var(--workspace-resizer-width);width: var(--workspace-resizer-width);margin: var(--workspace-edge) calc(var(--workspace-panel-gap) * -1);}.workspace-shell>.panel--preview{flex: 1 1 0;min-width: var(--preview-panel-min);margin-left: var(--workspace-panel-gap);margin-right: var(--workspace-edge);}.panel-header--preview{gap: 6px;min-width: 0;}.panel-title--icon{flex: 0 0 16px;min-width: 16px;justify-content: flex-start;}.preview-header-actions{display: flex;align-items: center;gap: 8px;margin-left: auto;flex: 0 1 auto;min-width: 0;}.device-controls{flex: 0 1 auto;min-width: 0;}.device-controls .control-btn{min-width: 28px;white-space: nowrap;justify-content: center;}@container (max-width: 440px){.panel-header--preview{padding-inline: 10px;}.device-controls .control-btn span{max-width: 0;opacity: 0;}.device-controls .control-btn{padding-inline: 7px;gap: 0;}}@media (max-width: 1152px){.workspace-shell>.panel{margin: 0;}.workspace-shell>.panel--editor,.workspace-shell>.panel--preview{min-width: 0;}}
   </style>
-  <link rel="stylesheet" href="../styles.min.css?v=20339c1e9861">
+  <link rel="stylesheet" href="../styles.min.css?v=b5f1c966fdf2">
   <!-- Lucide Icons (local copy avoids intermittent CDN startup failures) -->
   <script defer src="../lucide.min.js?v=f87e9a326d5d"></script>
   <!-- JSZip is loaded on demand by the import/export module. -->
-  <script defer src="../app.bundle.js?v=a85f0234fed0"></script>
+  <script defer src="../app.bundle.js?v=8a5477d344fe"></script>
 </head>
 <body>
   <a class="skip-link" href="#workspace-container">Saltar al editor</a>
@@ -101,7 +102,6 @@
         <i data-lucide="menu"></i>
       </button>
       <div class="mobile-brand">HTML Viewer</div>
-      <button id="btn-mobile-help" class="mobile-help-link" aria-label="Ayuda">?</button>
       <div class="mobile-tabs">
         <button class="mobile-tab-btn active" data-tab="editor">
           <i data-lucide="code-2"></i>
@@ -132,13 +132,13 @@
           </button>
           <button id="btn-highlight-full" class="nav-button">
             <i data-lucide="maximize-2"></i>
-            <span data-i18n="sidebar_focus">Modo Enfoque</span>
+            <span data-i18n="sidebar_focus">Modo enfoque</span>
           </button>
 
           <div class="menu-category" data-i18n="cat_file">Archivo</div>
           <button id="btn-import" class="nav-button">
             <i data-lucide="file-up"></i>
-            <span data-i18n="sidebar_import">Importar Proyecto</span>
+            <span data-i18n="sidebar_import">Importar proyecto</span>
           </button>
           <button id="btn-export" class="nav-button">
             <i data-lucide="file-down"></i>
@@ -148,11 +148,11 @@
           <div class="menu-category" data-i18n="cat_actions">Acciones</div>
           <button id="btn-sample" class="nav-button">
             <i data-lucide="sparkles"></i>
-            <span data-i18n="sidebar_sample">Cargar Ejemplo</span>
+            <span data-i18n="sidebar_sample">Cargar ejemplo</span>
           </button>
           <button id="btn-clear" class="nav-button">
             <i data-lucide="trash-2"></i>
-            <span data-i18n="sidebar_clear">Limpiar Todo</span>
+            <span data-i18n="sidebar_clear">Limpiar todo</span>
           </button>
         </nav>
       </div>
@@ -163,14 +163,13 @@
           <span data-i18n="sidebar_about">Ayuda</span>
         </button>
         <button id="btn-theme" class="theme-toggle">
-          <span data-i18n="sidebar_mode_dark">Modo Oscuro</span>
+          <span data-i18n="sidebar_mode_dark">Modo oscuro</span>
           <span class="theme-icon-container">
             <i data-lucide="moon" class="icon-moon"></i>
             <i data-lucide="sun" class="icon-sun"></i>
           </span>
         </button>
         <div class="sidebar-links">
-          <a href="https://github.com/Kakauet/HTML-Viewer" rel="external">GitHub</a>
           <a class="language-link" href="../" lang="en">English</a>
         </div>
       </div>
@@ -231,7 +230,7 @@
             <div class="file-explorer" id="file-explorer" style="display: none;">
               <div class="file-explorer-header">
                 <div class="file-explorer-heading">
-                  <span data-i18n="choose_file">Elegir archivo</span>
+                  <span data-i18n="explorer_title">Explorador</span>
                 </div>
                 <div class="file-explorer-actions" style="display: flex; gap: 4px;">
                   <button class="file-explorer-btn" id="btn-upload-asset" data-i18n-title="upload_files" data-i18n-aria-label="upload_files" title="Subir archivos" aria-label="Subir archivos">
@@ -298,7 +297,7 @@
             <div class="panel-title panel-title--icon">
               <i data-lucide="eye"></i>
             </div>
-            <div id="preview-status" class="preview-status" role="status" aria-live="polite">Listo</div>
+            <div id="preview-status" class="preview-status" role="status" aria-live="polite" data-i18n="preview_ready">Listo</div>
 
             <!-- Responsive sizes controls -->
           <div class="preview-header-actions" id="preview-header-actions">
@@ -308,7 +307,7 @@
             <button class="preview-reload-btn" id="btn-preview-reload" data-i18n-title="emulator_reload" data-i18n-aria-label="emulator_reload" title="Recargar previsualización" aria-label="Recargar previsualización">
               <i data-lucide="rotate-cw"></i>
             </button>
-            <button class="preview-reload-btn preview-console-btn" id="btn-preview-console" title="Consola de diagnóstico" aria-label="Abrir consola de diagnóstico" aria-expanded="false">
+            <button class="preview-reload-btn preview-console-btn" id="btn-preview-console" data-i18n-title="console_open" data-i18n-aria-label="console_open" title="Abrir consola de diagnóstico" aria-label="Abrir consola de diagnóstico" aria-controls="preview-console" aria-expanded="false">
               <i data-lucide="terminal-square"></i>
               <span class="preview-console-badge" id="preview-console-badge" hidden>0</span>
             </button>
@@ -343,19 +342,19 @@
                 isolation would require serving the preview from a dedicated
                 subdomain (an infra change, not configurable here).
               -->
-              <iframe id="preview-iframe" class="preview-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation"></iframe>
+              <iframe id="preview-iframe" class="preview-iframe" data-html-viewer-preview sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation" allow="accelerometer *; autoplay *; camera *; clipboard-read *; clipboard-write *; display-capture *; encrypted-media *; fullscreen *; geolocation *; gyroscope *; magnetometer *; microphone *; midi *; picture-in-picture *; screen-wake-lock *; xr-spatial-tracking *; payment &#39;none&#39;; usb &#39;none&#39;; serial &#39;none&#39;; hid &#39;none&#39;; bluetooth &#39;none&#39;; publickey-credentials-get &#39;none&#39;; identity-credentials-get &#39;none&#39;"></iframe>
             </div>
-            <section class="preview-console" id="preview-console" aria-label="Consola de diagnóstico" hidden>
-              <div class="preview-console-resizer" id="preview-console-resizer" role="separator" aria-label="Cambiar altura de la consola" aria-orientation="horizontal" tabindex="0"><span></span></div>
+            <section class="preview-console" id="preview-console" data-i18n-aria-label="console_title" aria-label="Diagnóstico" hidden>
+              <div class="preview-console-resizer" id="preview-console-resizer" role="separator" data-i18n-aria-label="console_resize" aria-label="Cambiar la altura de la consola" aria-orientation="horizontal" tabindex="0"><span></span></div>
               <header class="preview-console-header">
-                <div class="preview-console-title"><i data-lucide="terminal-square"></i><span>Diagnóstico</span><span class="preview-console-summary" id="preview-console-summary">Sin problemas</span></div>
+                <div class="preview-console-title"><i data-lucide="terminal-square"></i><span data-i18n="console_title">Diagnóstico</span><span class="preview-console-summary" id="preview-console-summary" data-i18n="console_none">Sin problemas</span></div>
                 <div class="preview-console-actions">
-                  <button type="button" id="btn-preview-console-clear">Limpiar</button>
-                  <button type="button" id="btn-preview-console-close" aria-label="Cerrar consola"><i data-lucide="x"></i></button>
+                  <button type="button" id="btn-preview-console-clear" data-i18n="console_clear">Limpiar</button>
+                  <button type="button" id="btn-preview-console-close" data-i18n-title="console_close" data-i18n-aria-label="console_close" title="Cerrar consola" aria-label="Cerrar consola"><i data-lucide="x"></i></button>
                 </div>
               </header>
-              <div class="preview-console-filters" id="preview-console-filters">
-                <button type="button" class="active" data-diagnostic-filter="all">Todos</button><button type="button" data-diagnostic-filter="error">JS</button><button type="button" data-diagnostic-filter="resource">Recursos</button><button type="button" data-diagnostic-filter="route">Rutas</button><button type="button" data-diagnostic-filter="cors">CORS/red</button>
+              <div class="preview-console-filters" id="preview-console-filters" role="toolbar" data-i18n-aria-label="console_filters" aria-label="Filtrar diagnósticos">
+                <button type="button" class="active" aria-pressed="true" data-diagnostic-filter="all" data-i18n="console_filter_all">Todos</button><button type="button" aria-pressed="false" data-diagnostic-filter="error">JS</button><button type="button" aria-pressed="false" data-diagnostic-filter="resource" data-i18n="console_filter_resource">Recursos</button><button type="button" aria-pressed="false" data-diagnostic-filter="route" data-i18n="console_filter_route">Rutas</button><button type="button" aria-pressed="false" data-diagnostic-filter="cors" data-i18n="console_filter_cors">CORS/red</button>
               </div>
               <div class="preview-console-list" id="preview-console-list" role="log" aria-live="polite"></div>
             </section>
@@ -383,17 +382,17 @@
   </div>
 
   <!-- Modal Exportar -->
-  <div class="modal-overlay" id="modal-export" style="display: none;">
+  <div class="modal-overlay" id="modal-export" role="dialog" aria-modal="true" aria-labelledby="export-title" style="display: none;">
     <div class="modal-card">
       <header class="modal-header">
         <div class="modal-title-group">
           <i data-lucide="file-down" class="modal-title-icon"></i>
           <div>
-            <h3 data-i18n="export_title">Exportar Proyecto</h3>
+            <h3 id="export-title" data-i18n="export_title">Exportar proyecto</h3>
             <p data-i18n="export_subtitle">Elige el formato de salida para guardar tu código</p>
           </div>
         </div>
-        <button class="modal-close-btn" id="modal-export-close" data-i18n-aria-label="mobile_close_menu" aria-label="Cerrar menú">
+        <button class="modal-close-btn" id="modal-export-close" data-i18n-aria-label="close_dialog" aria-label="Cerrar">
           <i data-lucide="x"></i>
         </button>
       </header>
@@ -403,10 +402,10 @@
             <i data-lucide="folder-symlink"></i>
           </div>
           <div class="modal-option-text">
-            <span class="modal-option-title" data-i18n="export_local_title">Carpeta Local</span>
+            <span class="modal-option-title" data-i18n="export_local_title">Carpeta local</span>
             <span class="modal-option-desc" data-i18n="export_local_desc">Guarda los archivos directamente en una carpeta local (requiere soporte de navegador)</span>
           </div>
-          <span class="compatibility-badge" id="folder-export-compatibility" style="display: none;" data-i18n="export_local_unsupported">No Soportado</span>
+          <span class="compatibility-badge" id="folder-export-compatibility" style="display: none;" data-i18n="export_local_unsupported">No compatible</span>
         </button>
         <button class="modal-option-btn" id="btn-export-zip-opt">
           <div class="modal-option-icon-wrapper">
@@ -438,14 +437,14 @@
     <div class="about-panel-content">
       <header class="about-panel-header">
         <h2 id="help-title" data-i18n="about_title">Ayuda</h2>
-        <button class="about-close-btn" id="about-close-btn" data-i18n-aria-label="mobile_close_menu" aria-label="Cerrar menú">
+        <button class="about-close-btn" id="about-close-btn" data-i18n-aria-label="close_dialog" aria-label="Cerrar">
           <i data-lucide="x"></i>
         </button>
       </header>
       <div class="about-panel-body" id="about-panel-body"><section class="about-section"><h3>Editar y previsualizar</h3><p>Usa Simple para un documento HTML. Usa Archivos para un proyecto con HTML, CSS, JavaScript y recursos en carpetas. La vista previa se actualiza al editar.</p></section>
 <section class="about-section"><h3>Importar y guardar</h3><p>Importa un HTML o un ZIP con los botones o arrastrándolo al editor. Exporta como HTML, ZIP o carpeta local cuando tu navegador lo permita.</p></section>
 <section class="about-section"><h3>Almacenamiento local</h3><p>Los archivos se procesan en tu navegador. El tema, la distribución y la recuperación del editor usan almacenamiento local. Exporta una copia para conservar tu trabajo; borrar los datos del navegador elimina la recuperación.</p></section>
-<section class="about-section"><h3>Vista previa de proyectos</h3><p>El modo Archivos requiere HTTPS o localhost. Ejecuta código preparado para el navegador; los proyectos que necesitan un servidor o una compilación deben prepararse antes de importarlos. Los scripts y recursos de la vista previa pueden acceder a Internet.</p></section><section class="about-section"><h3>Atajos de teclado</h3><div class="about-shortcuts-list"><div class="about-shortcut-row"><kbd>Ctrl + Z</kbd><span>Deshacer</span></div><div class="about-shortcut-row"><kbd>Ctrl + Y</kbd><span>Rehacer</span></div><div class="about-shortcut-row"><kbd>Ctrl + S</kbd><span>Exportar</span></div><div class="about-shortcut-row"><kbd>Ctrl + +/−</kbd><span>Zoom del editor</span></div><div class="about-shortcut-row"><kbd>Ctrl + 0</kbd><span>Restablecer zoom</span></div></div></section>
+<section class="about-section"><h3>Vista previa de proyectos</h3><p>El modo Archivos requiere HTTPS o localhost. Ejecuta código preparado para el navegador; los proyectos que necesitan un servidor o una compilación deben prepararse antes de importarlos. Los scripts y recursos de la vista previa pueden acceder a Internet.</p></section><section class="about-section"><h3>Atajos de teclado</h3><div class="about-shortcuts-list"><div class="about-shortcut-row"><kbd>Ctrl + Z</kbd><span>Deshacer</span></div><div class="about-shortcut-row"><kbd>Ctrl + Y</kbd><span>Rehacer</span></div><div class="about-shortcut-row"><kbd>Ctrl + S</kbd><span>Exportar</span></div><div class="about-shortcut-row"><kbd>Ctrl + O</kbd><span>Importar</span></div><div class="about-shortcut-row"><kbd>Ctrl + P</kbd><span>Abrir a página completa</span></div><div class="about-shortcut-row"><kbd>Ctrl + +/−</kbd><span>Zoom del editor</span></div><div class="about-shortcut-row"><kbd>Ctrl + 0</kbd><span>Restablecer zoom</span></div></div><p class="about-note">En macOS, usa ⌘ en lugar de Ctrl.</p></section>
       </div>
     </div>
   </aside>

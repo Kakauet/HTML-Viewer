@@ -12,14 +12,32 @@ let previewDiagnosticFilter = 'all';
 const PREVIEW_CONSOLE_HEIGHT_KEY = 'html-viewer-preview-console-height';
 
 function getDiagnosticLabel(type) {
-  return ({ error: 'JavaScript', warning: 'Aviso', resource: 'Recurso', route: 'Ruta', cors: 'CORS/red' })[type] || 'Diagnóstico';
+  return ['error', 'warning', 'resource', 'route', 'cors'].includes(type) ? t(`diag_${type}`) : t('diag_generic');
 }
 
 function getDiagnosticHint(item) {
-  if (item.type === 'cors') return 'El servidor remoto puede estar bloqueando la petición. Revisa Access-Control-Allow-Origin y la URL.';
-  if (item.type === 'route') return 'Comprueba que la ruta exista y que respete mayúsculas, carpetas y extensión.';
-  if (item.type === 'resource') return 'Comprueba la ruta del archivo y que el recurso esté incluido en el proyecto.';
-  return '';
+  return ['cors', 'route', 'resource'].includes(item.type) ? t(`diag_hint_${item.type}`) : '';
+}
+
+function getDiagnosticSummary(count) {
+  if (!count) return t('console_none');
+  return count === 1 ? t('console_count_one') : t('console_count_other', { count });
+}
+
+// Show project files by their project path instead of the internal virtual
+// URL; srcdoc documents have no meaningful location of their own.
+function formatDiagnosticLocation(value) {
+  const text = String(value || '');
+  if (!text || /^about:srcdoc/i.test(text)) return '';
+  const projectPath = getProjectPreviewPathFromUrl(text);
+  if (projectPath) return projectPath;
+  if (/^blob:/i.test(text)) return '';
+  // Files previews report their published URLs: show the site path.
+  try {
+    const url = new URL(text);
+    if (url.origin === location.origin) return `${decodeUrlPathComponent(url.pathname)}${url.search}`;
+  } catch {}
+  return text;
 }
 
 function renderPreviewDiagnostics() {
@@ -29,7 +47,7 @@ function renderPreviewDiagnostics() {
   if (!visible.length) {
     const empty = document.createElement('div');
     empty.className = 'preview-console-empty';
-    empty.textContent = previewDiagnostics.length ? 'No hay problemas de este tipo.' : 'No se han detectado problemas.';
+    empty.textContent = previewDiagnostics.length ? t('console_empty_filtered') : t('console_empty');
     previewConsoleList.appendChild(empty);
   }
   visible.forEach(item => {
@@ -45,11 +63,12 @@ function renderPreviewDiagnostics() {
     message.textContent = item.message;
     heading.append(label, message);
     row.appendChild(heading);
-    const locationText = item.resourceUrl || item.sourceUrl || item.url;
+    const locationText = formatDiagnosticLocation(item.resourceUrl || item.sourceUrl || item.url);
     if (locationText) {
       const location = document.createElement('div');
       location.className = 'preview-console-location';
       location.textContent = `${locationText}${item.line ? `:${item.line}${item.column ? `:${item.column}` : ''}` : ''}`;
+      location.title = item.resourceUrl || item.sourceUrl || item.url;
       row.appendChild(location);
     }
     const hintText = getDiagnosticHint(item);
@@ -62,11 +81,16 @@ function renderPreviewDiagnostics() {
     previewConsoleList.appendChild(row);
   });
   const count = previewDiagnostics.length;
-  previewConsoleSummary.textContent = count ? `${count} problema${count === 1 ? '' : 's'}` : 'Sin problemas';
+  const summary = getDiagnosticSummary(count);
+  previewConsoleSummary.textContent = summary;
+  previewConsoleSummary.classList.toggle('has-issues', count > 0);
   previewConsoleBadge.hidden = count === 0;
   previewConsoleBadge.textContent = count > 99 ? '99+' : String(count);
   previewConsoleButton?.classList.toggle('has-diagnostics', count > 0);
-  previewConsoleButton?.setAttribute('title', count ? `Consola de diagnóstico: ${count} problema${count === 1 ? '' : 's'}` : 'Consola de diagnóstico');
+  const buttonLabel = count ? t('console_button_title', { summary }) : t('console_open');
+  previewConsoleButton?.setAttribute('title', buttonLabel);
+  previewConsoleButton?.setAttribute('aria-label', buttonLabel);
+  if (previewConsoleClear) previewConsoleClear.disabled = count === 0;
 }
 
 const clearPreviewDiagnosticsState = () => {
@@ -75,10 +99,12 @@ const clearPreviewDiagnosticsState = () => {
 };
 window.clearPreviewDiagnostics = clearPreviewDiagnosticsState;
 
-function setPreviewConsoleOpen(open) {
+function setPreviewConsoleOpen(open, { restoreFocus = false } = {}) {
   if (!previewConsolePanel) return;
   previewConsolePanel.hidden = !open;
   previewConsoleButton?.setAttribute('aria-expanded', String(open));
+  previewConsoleButton?.classList.toggle('active', open);
+  if (!open && restoreFocus) previewConsoleButton?.focus({ preventScroll: true });
 }
 
 function getPreviewConsoleHeightLimits() {
@@ -173,13 +199,21 @@ window.addEventListener('message', event => {
 });
 
 previewConsoleButton?.addEventListener('click', () => setPreviewConsoleOpen(previewConsolePanel?.hidden));
-previewConsoleClose?.addEventListener('click', () => setPreviewConsoleOpen(false));
+previewConsoleClose?.addEventListener('click', () => setPreviewConsoleOpen(false, { restoreFocus: true }));
+previewConsolePanel?.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  event.stopPropagation();
+  setPreviewConsoleOpen(false, { restoreFocus: true });
+});
 previewConsoleClear?.addEventListener('click', clearPreviewDiagnosticsState);
 previewConsoleFilters?.addEventListener('click', event => {
   const button = event.target.closest('[data-diagnostic-filter]');
   if (!button) return;
   previewDiagnosticFilter = button.dataset.diagnosticFilter;
-  previewConsoleFilters.querySelectorAll('button').forEach(item => item.classList.toggle('active', item === button));
+  previewConsoleFilters.querySelectorAll('button').forEach(item => {
+    item.classList.toggle('active', item === button);
+    item.setAttribute('aria-pressed', String(item === button));
+  });
   renderPreviewDiagnostics();
 });
 renderPreviewDiagnostics();

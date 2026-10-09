@@ -111,6 +111,7 @@ function initMobileControls() {
     if (sidebar) sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('active');
     syncSidebarInteractivity();
+    mobileMenuToggle?.setAttribute('aria-expanded', 'false');
   }
 
   // Helper to open drawer
@@ -118,7 +119,17 @@ function initMobileControls() {
     if (sidebar) sidebar.classList.add('open');
     if (overlay) overlay.classList.add('active');
     syncSidebarInteractivity();
+    mobileMenuToggle?.setAttribute('aria-expanded', 'true');
+    sidebarCloseBtn?.focus({ preventScroll: true });
   }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !sidebar?.classList.contains('open')) return;
+    if (window.innerWidth > COMPACT_LAYOUT_MAX_WIDTH) return;
+    event.preventDefault();
+    closeSidebar();
+    mobileMenuToggle?.focus({ preventScroll: true });
+  });
 
   // Sidebar toggle events
   if (mobileMenuToggle) {
@@ -131,11 +142,18 @@ function initMobileControls() {
     overlay.addEventListener('click', closeSidebar);
   }
 
+  mobileMenuToggle?.setAttribute('aria-expanded', 'false');
+  tabButtons.forEach(btn => btn.setAttribute('aria-pressed', String(btn.classList.contains('active'))));
+
   // Tab switching events
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      tabButtons.forEach(b => b.classList.remove('active'));
+      tabButtons.forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+      });
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
 
       const targetTab = btn.getAttribute('data-tab');
       if (targetTab === 'editor') {
@@ -210,7 +228,8 @@ function initState() {
   if (appStateInitialized) return;
   appStateInitialized = true;
   applyLocale();
-  const savedTheme = readStoredValue('theme', 'dark');
+  // Only two themes exist; ignore any other stored value.
+  const savedTheme = readStoredValue('theme', 'dark') === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
 
   const themeLabel = document.querySelector('#btn-theme span');

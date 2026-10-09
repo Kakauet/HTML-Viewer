@@ -71,7 +71,8 @@ async function verify(browser, mount, fullCheck, headers, port) {
       await page.locator('#btn-redo').click();
       await frame.locator('#published-marker').filter({ hasText: 'B' }).waitFor();
       await page.locator('#btn-mode-split').click();
-      await page.waitForFunction(expected => document.querySelector('#preview-iframe').contentWindow.location.href.startsWith(expected), `${base}__html_viewer_project__/`);
+      // Project pages show their published URL, served by the worker under the editor's origin.
+      await page.waitForFunction(() => { try { return Boolean(document.querySelector('#preview-iframe').contentWindow.__htmlViewerPreview); } catch { return false; } });
       await frame.locator('#published-marker').filter({ hasText: 'B' }).waitFor();
       assert.equal(await page.evaluate(() => navigator.serviceWorker.controller), null, 'Project worker controlled the editor');
 
@@ -96,9 +97,6 @@ async function verify(browser, mount, fullCheck, headers, port) {
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#about-panel').getAttribute('aria-hidden'), 'true');
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.locator('#btn-mobile-help').click();
-      assert.equal(await page.locator('#about-panel').getAttribute('aria-hidden'), 'false');
-      await page.locator('#about-close-btn').click();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Mobile overflow');
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.locator('.language-link').click();
@@ -122,7 +120,7 @@ async function verify(browser, mount, fullCheck, headers, port) {
   for (const notice of ['LICENSE', 'THIRD-PARTY-NOTICES.md', 'assets/licenses/Lucide.txt', 'assets/licenses/JSZip.txt', 'assets/licenses/Pako.txt', 'assets/licenses/Pako-zlib.txt']) {
     assert.ok(fs.statSync(path.join(dist, notice)).size > 0, `Missing license: ${notice}`);
   }
-  assert.deepEqual(files.filter(file => file.endsWith('.html')).map(file => path.relative(dist, file).split(path.sep).join('/')).sort(), ['404.html', 'es/index.html', 'index.html']);
+  assert.deepEqual(files.filter(file => file.endsWith('.html')).map(file => path.relative(dist, file).split(path.sep).join('/')).sort(), ['404.html', 'es/index.html', 'index.html', 'preview.html']);
   const browser = await chromium.launch({ headless: true });
   try {
     await verify(browser, configuredMount, true, true, 4186);

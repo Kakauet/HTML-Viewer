@@ -16,6 +16,41 @@ function decodeUrlPathComponent(value) {
   }
 }
 
+// Text files are edited and served as UTF-8. Older sites are often saved as
+// Windows-1252/ISO-8859-1 or UTF-16, so decode with the encoding the file
+// declares (BOM, <meta charset> or @charset) instead of assuming UTF-8.
+function decodeTextFileBytes(input, filename = '') {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  const decode = (label, view = bytes) => {
+    try { return new TextDecoder(label).decode(view); } catch { return null; }
+  };
+  if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return decode('utf-8', bytes.subarray(3));
+  if (bytes[0] === 0xFF && bytes[1] === 0xFE) return decode('utf-16le', bytes.subarray(2)) ?? '';
+  if (bytes[0] === 0xFE && bytes[1] === 0xFF) return decode('utf-16be', bytes.subarray(2)) ?? '';
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {}
+  // Not valid UTF-8: honor a declared charset, otherwise use the web's
+  // default legacy encoding.
+  const head = new TextDecoder('windows-1252').decode(bytes.subarray(0, 2048));
+  const ext = getFileExtension(filename);
+  const declared = ext === 'css'
+    ? /^@charset\s+["']([\w.:-]+)["']/i.exec(head)?.[1]
+    : (/<meta[^>]+charset\s*=\s*["']?\s*([\w.:-]+)/i.exec(head)?.[1]);
+  const declaredText = declared && !/^utf-?(?:8|16)/i.test(declared) ? decode(declared.toLowerCase()) : null;
+  const text = declaredText ?? decode('windows-1252') ?? '';
+  // The text is stored and exported as UTF-8 from now on; keep its
+  // declaration truthful so the exported file opens correctly.
+  if (!declared) return text;
+  return ext === 'css'
+    ? text.replace(/^@charset\s+["'][\w.:-]+["']/i, '@charset "utf-8"')
+    : text.replace(/(<meta[^>]+charset\s*=\s*["']?\s*)[\w.:-]+/i, '$1utf-8');
+}
+
+async function readTextFile(file) {
+  return decodeTextFileBytes(new Uint8Array(await file.arrayBuffer()), file.name || '');
+}
+
 function normalizeReferencePathValue(path) {
   return decodeUrlPathComponent(String(path || '').trim()).replace(/\\/g, '/');
 }
@@ -143,6 +178,42 @@ function getMimeTypeForFilename(filename) {
       return 'application/pdf';
     case 'wasm':
       return 'application/wasm';
+    // Less common web formats: browsers check these types for subtitles,
+    // feeds, 3D models and media sources.
+    case 'vtt':
+      return 'text/vtt';
+    case 'jsonld':
+      return 'application/ld+json';
+    case 'geojson':
+      return 'application/geo+json';
+    case 'xhtml':
+      return 'application/xhtml+xml';
+    case 'rss':
+      return 'application/rss+xml';
+    case 'atom':
+      return 'application/atom+xml';
+    case 'gltf':
+      return 'model/gltf+json';
+    case 'glb':
+      return 'model/gltf-binary';
+    case 'jxl':
+      return 'image/jxl';
+    case 'tif':
+    case 'tiff':
+      return 'image/tiff';
+    case 'flac':
+      return 'audio/flac';
+    case 'aac':
+      return 'audio/aac';
+    case 'opus':
+    case 'oga':
+      return 'audio/ogg';
+    case 'ogv':
+      return 'video/ogg';
+    case 'm4v':
+      return 'video/mp4';
+    case 'zip':
+      return 'application/zip';
     default:
       return 'application/octet-stream';
   }

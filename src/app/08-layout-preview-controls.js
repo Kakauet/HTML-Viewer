@@ -89,6 +89,7 @@ function initResizer() {
     const workspaceWidth = workspace?.getBoundingClientRect().width || 0;
     const initialPercent = clampSplitPercent(Number.isFinite(savedPercent) ? savedPercent : 55, workspaceWidth);
     workspace.style.setProperty('--split-percent', `${initialPercent}%`);
+    syncHandleValue();
   });
 
   // Layout offsets to align handle center with cursor
@@ -114,6 +115,39 @@ function initResizer() {
     const y = Math.max(minY, Math.min(maxY, clientY - dragHandleTop));
     handle.style.setProperty('--mouse-y', `${y}px`);
   }
+
+  // Keyboard resizing keeps the split usable without a pointer.
+  handle.setAttribute('role', 'separator');
+  handle.setAttribute('aria-orientation', 'vertical');
+  handle.setAttribute('aria-controls', 'editor-panel');
+  handle.setAttribute('aria-label', t('resize_panels'));
+  handle.tabIndex = 0;
+  const syncHandleValue = () => {
+    const percent = Number.parseFloat(workspace.style.getPropertyValue('--split-percent')) || savedPercent || 55;
+    handle.setAttribute('aria-valuenow', String(Math.round(percent)));
+  };
+  handle.setAttribute('aria-valuemin', String(MIN_SPLIT_PERCENT));
+  handle.setAttribute('aria-valuemax', String(MAX_SPLIT_PERCENT));
+  handle.addEventListener('keydown', (event) => {
+    const keys = { ArrowLeft: -2, ArrowRight: 2, Home: -100, End: 100 };
+    if (!(event.key in keys)) return;
+    event.preventDefault();
+    const workspaceWidth = workspace.getBoundingClientRect().width || 0;
+    const current = Number.parseFloat(workspace.style.getPropertyValue('--split-percent')) || 55;
+    const step = event.shiftKey ? keys[event.key] * 5 : keys[event.key];
+    const next = clampSplitPercent(current + step, workspaceWidth);
+    workspace.style.setProperty('--split-percent', `${next}%`);
+    writeStoredValue('split-percent', next);
+    syncHandleValue();
+    queueEditorLayout();
+  });
+  handle.addEventListener('dblclick', () => {
+    const next = clampSplitPercent(55);
+    workspace.style.setProperty('--split-percent', `${next}%`);
+    writeStoredValue('split-percent', next);
+    syncHandleValue();
+    queueEditorLayout();
+  });
 
   // Update position on hover/movement over handle
   handle.addEventListener('mousemove', updateMouseY);
@@ -178,6 +212,7 @@ function initResizer() {
     const editorRect = editorPanel.getBoundingClientRect();
     const currentPercent = clampSplitPercent((editorRect.width / workspaceRect.width) * 100, workspaceRect.width);
     writeStoredValue('split-percent', currentPercent);
+    syncHandleValue();
 
     document.removeEventListener('mousemove', drag);
     document.removeEventListener('touchmove', drag);
@@ -276,9 +311,14 @@ const previewHomeBtn = document.getElementById('btn-preview-home');
 const previewReloadBtn = document.getElementById('btn-preview-reload');
 
 controlButtons.forEach(btn => {
+  btn.setAttribute('aria-pressed', String(btn.classList.contains('active')));
   btn.addEventListener('click', () => {
-    controlButtons.forEach(b => b.classList.remove('active'));
+    controlButtons.forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
     btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
 
     const size = btn.getAttribute('data-size');
     iframeWrapper.className = 'iframe-wrapper'; // Reset
@@ -315,39 +355,79 @@ if (previewReloadBtn) {
 // Sidebar Navigation / Actions
 
 // 1. Preview (Full Page)
+// The full page opens the preview host, which runs the page with the same
+// sandbox as the editor's preview and without a reference to the editor.
+function getFullPagePreviewRoute() {
+  try {
+    const current = new URL(previewIframe.contentWindow.location.href);
+    if (
+      previewLifecycle.mode === 'project' &&
+      current.origin === location.origin &&
+      !getProjectPreviewPathFromUrl(current.href) &&
+      readPreviewRuntimeInfo(previewIframe.contentWindow)?.prettyPathname
+    ) {
+      return `${current.pathname}${current.search}${current.hash}`;
+    }
+  } catch {}
+  return getProjectPreviewSiteRoute(previewLifecycle.mode === 'project' && previewLifecycle.projectPath
+    ? previewLifecycle.projectPath
+    : getEntryFile()?.name || '');
+}
+
+// Simple documents are self-contained for the full page: project files are
+// embedded as Data URLs, so the page can run in an opaque origin.
+async function createFullPagePreviewDocument() {
+  const entryFile = getEntryFile();
+  if (!entryFile) return applyNonDraggableImageGuard(createEmptyProjectPreviewCode(), { renderToken: 'full-page' });
+  let html = getCurrentPreviewCode();
+  if (previewCodeUsesEditorBlobs) {
+    const raw = editorMode === 'unified' ? getCurrentEditorDocumentText() : getFileText(entryFile);
+    html = resolveVirtualPaths(raw, await createVirtualFileDataUrlSnapshot(), entryFile.name);
+  }
+  if (isEmptyPreviewCode(html)) html = createEmptyProjectPreviewCode('');
+  return applyNonDraggableImageGuard(html, { renderToken: 'full-page' });
+}
+
+function sendDocumentToFullPage(previewWindow, hostUrl, html) {
+  const title = /<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1]?.trim() || filenameInput?.value || 'HTML Viewer';
+  const targetOrigin = location.origin === 'null' ? '*' : location.origin;
+  const onMessage = event => {
+    if (event.source !== previewWindow || event.data?.type !== 'html-viewer:full-page-ready') return;
+    window.removeEventListener('message', onMessage);
+    previewWindow.postMessage({ type: 'html-viewer:full-page-document', html, title }, targetOrigin);
+  };
+  window.addEventListener('message', onMessage);
+  setTimeout(() => window.removeEventListener('message', onMessage), 60000);
+  hostUrl.searchParams.set('document', '1');
+  previewWindow.location.replace(hostUrl.href);
+}
+
 document.getElementById('btn-preview-full').addEventListener('click', async () => {
   if (!editor) return;
+  // Opened synchronously so the browser ties the window to this click.
+  const previewWindow = window.open('', '_blank');
+  if (!previewWindow) {
+    showToast(t('toast_popup_blocked'), 'error');
+    return;
+  }
+
   try {
-    const previewWindow = window.open('', '_blank');
-    if (!previewWindow) {
-      showToast(t('toast_popup_blocked'), 'error');
-      return;
-    }
-
-    const entryFile = getEntryFile();
-    if (!entryFile) {
-      previewWindow.document.open();
-      previewWindow.document.write(createEmptyProjectPreviewCode());
-      previewWindow.document.close();
-      return;
-    }
-
-    const hasProjectPreview = await syncProjectPreviewSnapshot({ full: true });
-    if (hasProjectPreview) {
-      previewWindow.location.href = getProjectPreviewUrl(entryFile.name, projectPreviewVersion);
+    const hostUrl = new URL(PREVIEW_HOST_PAGE, APP_ROOT_URL);
+    hostUrl.searchParams.set('lang', currentLocale);
+    if (editorMode === 'split' && getEntryFile() && await syncProjectPreviewSnapshot({ full: true })) {
+      hostUrl.searchParams.set('session', projectPreviewSessionId);
+      const siteRoot = getProjectPreviewSiteRootPath();
+      if (siteRoot) hostUrl.searchParams.set('root', siteRoot);
+      hostUrl.hash = getFullPagePreviewRoute();
+      previewWindow.location.replace(hostUrl.href);
       showToast(t('toast_project_opened_virtual'));
       return;
     }
 
-    const { code, urlsToRevoke } = createFullPagePreviewSnapshot();
-    previewWindow.document.open();
-    previewWindow.document.write(code);
-    previewWindow.document.close();
-    setTimeout(() => {
-      urlsToRevoke.forEach(url => URL.revokeObjectURL(url));
-    }, 10 * 60 * 1000);
+    sendDocumentToFullPage(previewWindow, hostUrl, await createFullPagePreviewDocument());
     showToast(t('toast_full_page_opened'));
-  } catch (err) {
+  } catch {
+    previewWindow.close();
     showToast(t('toast_page_open_error'), 'error');
   }
 });
@@ -378,14 +458,14 @@ document.getElementById('btn-highlight-full').addEventListener('click', () => {
 document.getElementById('btn-sample').addEventListener('click', () => {
   if (!editor) return;
   setEditorValue(DEFAULT_SAMPLE_CODE);
-  showToast(t('toast_sample_loaded'));
+  showUndoableToast(t('toast_sample_loaded'));
 });
 
 // 4. Clear
 document.getElementById('btn-clear').addEventListener('click', () => {
   if (!editor) return;
   setEditorValue('');
-  showToast(t('toast_editor_cleared'));
+  showUndoableToast(t('toast_editor_cleared'));
 });
 
 // 5. Import from File / ZIP / Drag-and-Drop Folder
@@ -437,6 +517,16 @@ if (assetInput) {
   });
 }
 
+// Name used for exported HTML. Simple mode uses the editable title; Files
+// mode hides that input, so its entry document names the download instead.
+function getExportBaseName() {
+  const rawName = editorMode === 'unified'
+    ? (filenameInput?.value || '')
+    : getBaseName(getEntryFile()?.name || '');
+  const name = rawName.trim().replace(/\.html?$/i, '').replace(/[\\/:*?"<>|]/g, '_');
+  return name || 'index';
+}
+
 // 6. Export to File / Project Folder / ZIP
 document.getElementById('btn-export').addEventListener('click', () => {
   if (!editor) return;
@@ -446,24 +536,8 @@ document.getElementById('btn-export').addEventListener('click', () => {
       // URLs.  Preview rewriting is a renderer concern.
       const code = getCurrentEditorDocumentText();
       const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
-      const link = document.createElement('a');
-
-      // Get custom filename
-      let filename = filenameInput ? filenameInput.value.trim() : 'index';
-      if (!filename) filename = 'index';
-      if (filename.toLowerCase().endsWith('.html')) {
-        filename = filename.substring(0, filename.length - 5);
-      }
-      const fullName = `${filename}.html`;
-
-      const downloadUrl = URL.createObjectURL(blob);
-      link.href = downloadUrl;
-      link.download = fullName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+      const fullName = `${getExportBaseName()}.html`;
+      downloadBlob(blob, fullName);
       showToast(t('toast_file_exported_as', { name: fullName }));
     } catch (err) {
       showToast(t('toast_export_error'), 'error');
@@ -475,7 +549,7 @@ document.getElementById('btn-export').addEventListener('click', () => {
 
 // Resizing and panel alignment updates on window resize
 window.addEventListener('resize', () => {
-  if (editorMode === 'split' && workspace) {
+  if (workspace) {
     const workspaceWidth = workspace.getBoundingClientRect().width || 0;
     const currentPercent = Number.parseFloat(workspace.style.getPropertyValue('--split-percent')) || 55;
     const clamped = clampSplitPercent(currentPercent, workspaceWidth);

@@ -46,21 +46,21 @@ let currentLocale = document.documentElement.lang === 'es' ? 'es' : 'en';
 const TRANSLATIONS = {
   es: {
     "sidebar_preview": "Página completa",
-    "sidebar_focus": "Modo Enfoque",
-    "sidebar_import": "Importar Proyecto",
+    "sidebar_focus": "Modo enfoque",
+    "sidebar_import": "Importar proyecto",
     "sidebar_export": "Exportar HTML",
-    "sidebar_sample": "Cargar Ejemplo",
-    "sidebar_clear": "Limpiar Todo",
-    "sidebar_mode_dark": "Modo Oscuro",
-    "sidebar_mode_light": "Modo Claro",
+    "sidebar_sample": "Cargar ejemplo",
+    "sidebar_clear": "Limpiar todo",
+    "sidebar_mode_dark": "Modo oscuro",
+    "sidebar_mode_light": "Modo claro",
     "cat_view": "Vista",
     "cat_file": "Archivo",
     "cat_file_unified": "Documento",
     "cat_file_split": "Proyecto",
     "sidebar_import_unified": "Importar HTML",
-    "sidebar_import_split": "Importar Proyecto",
+    "sidebar_import_split": "Importar proyecto",
     "sidebar_export_unified": "Descargar HTML",
-    "sidebar_export_split": "Exportar Proyecto",
+    "sidebar_export_split": "Exportar proyecto",
     "cat_actions": "Acciones",
     "mobile_code": "Código",
     "mobile_view": "Vista",
@@ -119,18 +119,18 @@ const TRANSLATIONS = {
     "drag_title_html": "Suelta para abrir HTML",
     "drag_desc_files": "El archivo se añadirá al proyecto automáticamente",
     "drag_desc_main": "La importación se abrirá como contenido principal",
-    "export_title": "Exportar Proyecto",
+    "export_title": "Exportar proyecto",
     "export_subtitle": "Elige el formato de salida para guardar tu código",
-    "export_local_title": "Carpeta Local",
+    "export_local_title": "Carpeta local",
     "export_local_desc": "Guarda los archivos directamente en una carpeta local (requiere soporte de navegador)",
-    "export_local_unsupported": "No Soportado",
+    "export_local_unsupported": "No compatible",
     "export_zip_title": "Archivo ZIP",
     "export_zip_desc": "Empaqueta todos los archivos virtuales en un archivo comprimido .zip descargable",
     "export_unified_title": "Exportar como HTML único",
     "export_unified_desc": "Compila y une todos los archivos en un único HTML listo para producción",
     "toast_offline_mode": "Modo sin conexión activado (editor básico)",
     "toast_popup_blocked": "El navegador bloqueó la ventana emergente",
-    "toast_project_opened_virtual": "Proyecto abierto como URL virtual",
+    "toast_project_opened_virtual": "Proyecto abierto a página completa",
     "toast_full_page_opened": "Visualización a página completa abierta",
     "toast_page_open_error": "Error al abrir la página",
     "toast_sample_loaded": "Código de ejemplo cargado",
@@ -139,12 +139,12 @@ const TRANSLATIONS = {
     "toast_files_added": "{count} archivo(s) añadidos",
     "toast_file_exported_as": "Archivo exportado como {name}",
     "toast_export_error": "Error al exportar el archivo",
-    "toast_jszip_not_loaded": "La librería JSZip no está cargada. Comprueba tu conexión a Internet.",
+    "toast_jszip_not_loaded": "No se pudo cargar el módulo ZIP. Recarga la página e inténtalo de nuevo.",
     "toast_project_exported_zip": "Proyecto exportado como ZIP: {name}",
     "toast_zip_generate_error": "Error al generar el archivo ZIP",
     "toast_local_export_unsupported": "Tu navegador no soporta la exportación a carpeta local.",
     "toast_local_export_success": "Proyecto exportado con éxito a la carpeta local",
-    "toast_export_cancelled": "Exportación cancelada por el usuario",
+    "toast_export_cancelled": "Exportación cancelada",
     "toast_folder_export_error": "Error al exportar a carpeta: {message}",
     "toast_html_imported": "Archivo HTML importado: {name}",
     "toast_html_read_error": "Error al leer el archivo HTML",
@@ -181,7 +181,49 @@ const TRANSLATIONS = {
     "default_file_name": "archivo",
     "imported_project_name": "proyecto-importado",
     "sidebar_about": "Ayuda",
-    "about_title": "Ayuda"
+    "about_title": "Ayuda",
+    "explorer_title": "Explorador",
+    "close_dialog": "Cerrar",
+    "resize_panels": "Cambiar el tamaño de los paneles",
+    "toast_undo": "Deshacer",
+    "preview_ready": "Listo",
+    "preview_empty_title": "La vista previa aparecerá aquí",
+    "preview_empty_hint": "Escribe HTML en el editor, carga el ejemplo o arrastra un archivo .html o .zip.",
+    "zoom_in": "Acercar",
+    "zoom_out": "Alejar",
+    "zoom_reset": "Restablecer zoom",
+    "console_title": "Diagnóstico",
+    "console_open": "Abrir consola de diagnóstico",
+    "console_close": "Cerrar consola",
+    "console_clear": "Limpiar",
+    "console_resize": "Cambiar la altura de la consola",
+    "console_filters": "Filtrar diagnósticos",
+    "console_filter_all": "Todos",
+    "console_filter_resource": "Recursos",
+    "console_filter_route": "Rutas",
+    "console_filter_cors": "CORS/red",
+    "console_none": "Sin problemas",
+    "console_count_one": "1 problema",
+    "console_count_other": "{count} problemas",
+    "console_button_title": "Consola de diagnóstico: {summary}",
+    "console_empty": "No se han detectado problemas.",
+    "console_empty_filtered": "No hay problemas de este tipo.",
+    "diag_error": "JavaScript",
+    "diag_warning": "Aviso",
+    "diag_resource": "Recurso",
+    "diag_route": "Ruta",
+    "diag_cors": "CORS/red",
+    "diag_generic": "Diagnóstico",
+    "diag_hint_cors": "El servidor remoto puede estar bloqueando la petición. Revisa Access-Control-Allow-Origin y la URL.",
+    "diag_hint_route": "Comprueba que la ruta exista y que respete mayúsculas, carpetas y extensión.",
+    "diag_hint_resource": "Comprueba la ruta del archivo y que el recurso esté incluido en el proyecto.",
+    "diag_resource_failed": "No se pudo cargar el recurso",
+    "diag_js_error": "Error de JavaScript",
+    "diag_unhandled_rejection": "Promesa rechazada sin gestionar",
+    "diag_service_worker_disabled": "La vista previa no ejecuta service workers del proyecto.",
+    "preview_viewing": "Viendo",
+    "full_page_loading": "Preparando la página…",
+    "full_page_expired": "Esta vista ya no está disponible. Ábrela de nuevo desde el editor."
   },
   en: {
     "sidebar_preview": "Full Page",
@@ -269,7 +311,7 @@ const TRANSLATIONS = {
     "export_unified_desc": "Compile and merge all files into a single HTML ready for production",
     "toast_offline_mode": "Offline mode activated (basic editor)",
     "toast_popup_blocked": "The browser blocked the pop-up window",
-    "toast_project_opened_virtual": "Project opened as virtual URL",
+    "toast_project_opened_virtual": "Project opened in full page",
     "toast_full_page_opened": "Full page preview opened",
     "toast_page_open_error": "Error opening page",
     "toast_sample_loaded": "Sample code loaded",
@@ -278,12 +320,12 @@ const TRANSLATIONS = {
     "toast_files_added": "{count} file(s) added",
     "toast_file_exported_as": "File exported as {name}",
     "toast_export_error": "Error exporting file",
-    "toast_jszip_not_loaded": "The JSZip library is not loaded. Check your Internet connection.",
+    "toast_jszip_not_loaded": "The ZIP module could not be loaded. Reload the page and try again.",
     "toast_project_exported_zip": "Project exported as ZIP: {name}",
     "toast_zip_generate_error": "Error generating ZIP file",
     "toast_local_export_unsupported": "Your browser does not support local folder export.",
     "toast_local_export_success": "Project successfully exported to local folder",
-    "toast_export_cancelled": "Export cancelled by user",
+    "toast_export_cancelled": "Export cancelled",
     "toast_folder_export_error": "Error exporting to folder: {message}",
     "toast_html_imported": "HTML file imported: {name}",
     "toast_html_read_error": "Error reading HTML file",
@@ -320,7 +362,49 @@ const TRANSLATIONS = {
     "default_file_name": "file",
     "imported_project_name": "imported-project",
     "sidebar_about": "Help",
-    "about_title": "Help"
+    "about_title": "Help",
+    "explorer_title": "Explorer",
+    "close_dialog": "Close",
+    "resize_panels": "Resize panels",
+    "toast_undo": "Undo",
+    "preview_ready": "Ready",
+    "preview_empty_title": "Your preview will appear here",
+    "preview_empty_hint": "Write HTML in the editor, load the example or drop an .html or .zip file.",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "zoom_reset": "Reset zoom",
+    "console_title": "Diagnostics",
+    "console_open": "Open diagnostics console",
+    "console_close": "Close console",
+    "console_clear": "Clear",
+    "console_resize": "Resize console",
+    "console_filters": "Filter diagnostics",
+    "console_filter_all": "All",
+    "console_filter_resource": "Resources",
+    "console_filter_route": "Routes",
+    "console_filter_cors": "CORS/network",
+    "console_none": "No issues",
+    "console_count_one": "1 issue",
+    "console_count_other": "{count} issues",
+    "console_button_title": "Diagnostics console: {summary}",
+    "console_empty": "No issues detected.",
+    "console_empty_filtered": "No issues of this type.",
+    "diag_error": "JavaScript",
+    "diag_warning": "Warning",
+    "diag_resource": "Resource",
+    "diag_route": "Route",
+    "diag_cors": "CORS/network",
+    "diag_generic": "Diagnostic",
+    "diag_hint_cors": "The remote server may be blocking the request. Check Access-Control-Allow-Origin and the URL.",
+    "diag_hint_route": "Check that the route exists and matches letter case, folders and extension.",
+    "diag_hint_resource": "Check the file path and that the resource is included in the project.",
+    "diag_resource_failed": "The resource could not be loaded",
+    "diag_js_error": "JavaScript error",
+    "diag_unhandled_rejection": "Unhandled promise rejection",
+    "diag_service_worker_disabled": "The preview does not run the project's service workers.",
+    "preview_viewing": "Viewing",
+    "full_page_loading": "Preparing the page…",
+    "full_page_expired": "This view is no longer available. Open it again from the editor."
   }
 };
 
@@ -451,7 +535,8 @@ const DEFAULT_SAMPLE_CODE_EN = `<!DOCTYPE html>
 
 const DEFAULT_SAMPLE_CODE = currentLocale === 'es' ? DEFAULT_SAMPLE_CODE_ES : DEFAULT_SAMPLE_CODE_EN;
 
-const PREVIEW_IDLE_LABEL = currentLocale === 'es' ? 'Activo' : 'Active';
+// An unchanged re-render keeps the same visible state as a completed load.
+const PREVIEW_IDLE_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_RENDERING_LABEL = currentLocale === 'es' ? 'Renderizando' : 'Rendering';
 const PREVIEW_READY_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_NOT_FOUND_LABEL = currentLocale === 'es' ? 'No encontrado' : 'Not found';
@@ -476,8 +561,13 @@ window.addEventListener('resize', updateEditorContentLeft);
 const HISTORY_DEBOUNCE_MS = 250;
 const MAX_TOASTS = 3;
 const PROJECT_PREVIEW_PREFIX = '__html_viewer_project__';
+// Full-page host: shows a preview in a sandboxed frame of its own window.
+const PREVIEW_HOST_PAGE = 'preview.html';
+// Capabilities granted to previewed pages. `allow-same-origin` is added only
+// for Files, whose pages must be served by the preview service worker.
+const PREVIEW_SANDBOX_TOKENS = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation';
 const PROJECT_PREVIEW_VERSION_PARAM = '__html_viewer_version';
-const PROJECT_PREVIEW_SW_VERSION = 'f41fee9bf57e';
+const PROJECT_PREVIEW_SW_VERSION = '2e535f81b03d';
 const PROJECT_PREVIEW_SW_URL = new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, APP_ROOT_URL).href;
 const PROJECT_PREVIEW_SW_SCOPE = new URL(`${PROJECT_PREVIEW_PREFIX}/`, APP_ROOT_URL).pathname;
 const PROJECT_PREVIEW_SW_READY_TIMEOUT_MS = 1800;
@@ -494,8 +584,9 @@ const previewIframe = document.getElementById('preview-iframe');
 const editorPlaceholder = document.getElementById('editor-placeholder');
 const previewStatus = document.getElementById('preview-status');
 
-// Toast Notification Helper
-function showToast(message, type = 'success') {
+// Toast Notification Helper. An optional action (e.g. Undo) keeps the toast
+// visible a little longer and dismisses it once used.
+function showToast(message, type = 'success', { action = null } = {}) {
   const container = document.getElementById('toast-container');
   if (!container) return;
 
@@ -511,6 +602,7 @@ function showToast(message, type = 'success') {
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
   const iconName = type === 'success' ? 'check-circle' : (type === 'error' ? 'alert-circle' : 'info');
   const icon = document.createElement('i');
@@ -519,20 +611,70 @@ function showToast(message, type = 'success') {
   text.textContent = message;
   toast.append(icon, text);
 
+  let hideTimeout = 0;
+  const dismiss = () => {
+    clearTimeout(hideTimeout);
+    if (!toast.parentNode || toast.classList.contains('hide')) return;
+    toast.classList.add('hide');
+    setTimeout(() => {
+      toast.remove();
+    }, 350);
+  };
+
+  if (action?.label && typeof action.onClick === 'function') {
+    const actionButton = document.createElement('button');
+    actionButton.type = 'button';
+    actionButton.className = 'toast-action';
+    actionButton.textContent = action.label;
+    actionButton.addEventListener('click', () => {
+      dismiss();
+      action.onClick();
+    }, { once: true });
+    toast.appendChild(actionButton);
+  }
+
   container.appendChild(toast);
   if (window.lucide) {
     lucide.createIcons();
   }
 
-  // Hide and remove
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.classList.add('hide');
-      setTimeout(() => {
-        toast.remove();
-      }, 350);
+  // Keep the toast while the pointer rests on it, so actions stay reachable.
+  const duration = action ? 6000 : 3000;
+  const scheduleHide = () => {
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(dismiss, duration);
+  };
+  toast.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+  toast.addEventListener('mouseleave', scheduleHide);
+  scheduleHide();
+}
+
+// Shows a confirmation toast whose action reverts the step that was just
+// recorded. Later edits make the action a no-op instead of undoing them.
+function showUndoableToast(message, type = 'success') {
+  const expectedState = undoStack[undoStack.length - 1];
+  showToast(message, type, {
+    action: {
+      label: t('toast_undo'),
+      onClick: () => {
+        if (expectedState && undoStack[undoStack.length - 1] === expectedState) triggerUndo();
+      }
     }
-  }, 3000);
+  });
+}
+
+// Download a Blob without revoking its URL before slower browsers start the
+// transfer (Firefox/Safari can cancel a download whose URL is revoked at once).
+function downloadBlob(blob, filename) {
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(downloadUrl), 30000);
 }
 
 // App State
@@ -590,7 +732,7 @@ let unifiedModel;
 const fileModels = {}; // fileId -> monaco.editor.ITextModel
 
 const TEXT_EXTENSIONS = new Set([
-  'html', 'htm', 'css', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'json', 'map', 'webmanifest', 'md', 'txt', 'csv', 'yaml', 'yml', 'xml', 'svg'
+  'html', 'htm', 'xhtml', 'css', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'json', 'jsonld', 'geojson', 'gltf', 'map', 'webmanifest', 'md', 'txt', 'csv', 'yaml', 'yml', 'xml', 'rss', 'atom', 'vtt', 'svg'
 ]);
 const IMAGE_EXTENSIONS = new Set(['png', 'apng', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'avif', 'bmp']);
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'ogg', 'm4a']);
@@ -937,6 +1079,41 @@ function decodeUrlPathComponent(value) {
   }
 }
 
+// Text files are edited and served as UTF-8. Older sites are often saved as
+// Windows-1252/ISO-8859-1 or UTF-16, so decode with the encoding the file
+// declares (BOM, <meta charset> or @charset) instead of assuming UTF-8.
+function decodeTextFileBytes(input, filename = '') {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  const decode = (label, view = bytes) => {
+    try { return new TextDecoder(label).decode(view); } catch { return null; }
+  };
+  if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return decode('utf-8', bytes.subarray(3));
+  if (bytes[0] === 0xFF && bytes[1] === 0xFE) return decode('utf-16le', bytes.subarray(2)) ?? '';
+  if (bytes[0] === 0xFE && bytes[1] === 0xFF) return decode('utf-16be', bytes.subarray(2)) ?? '';
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {}
+  // Not valid UTF-8: honor a declared charset, otherwise use the web's
+  // default legacy encoding.
+  const head = new TextDecoder('windows-1252').decode(bytes.subarray(0, 2048));
+  const ext = getFileExtension(filename);
+  const declared = ext === 'css'
+    ? /^@charset\s+["']([\w.:-]+)["']/i.exec(head)?.[1]
+    : (/<meta[^>]+charset\s*=\s*["']?\s*([\w.:-]+)/i.exec(head)?.[1]);
+  const declaredText = declared && !/^utf-?(?:8|16)/i.test(declared) ? decode(declared.toLowerCase()) : null;
+  const text = declaredText ?? decode('windows-1252') ?? '';
+  // The text is stored and exported as UTF-8 from now on; keep its
+  // declaration truthful so the exported file opens correctly.
+  if (!declared) return text;
+  return ext === 'css'
+    ? text.replace(/^@charset\s+["'][\w.:-]+["']/i, '@charset "utf-8"')
+    : text.replace(/(<meta[^>]+charset\s*=\s*["']?\s*)[\w.:-]+/i, '$1utf-8');
+}
+
+async function readTextFile(file) {
+  return decodeTextFileBytes(new Uint8Array(await file.arrayBuffer()), file.name || '');
+}
+
 function normalizeReferencePathValue(path) {
   return decodeUrlPathComponent(String(path || '').trim()).replace(/\\/g, '/');
 }
@@ -1064,6 +1241,42 @@ function getMimeTypeForFilename(filename) {
       return 'application/pdf';
     case 'wasm':
       return 'application/wasm';
+    // Less common web formats: browsers check these types for subtitles,
+    // feeds, 3D models and media sources.
+    case 'vtt':
+      return 'text/vtt';
+    case 'jsonld':
+      return 'application/ld+json';
+    case 'geojson':
+      return 'application/geo+json';
+    case 'xhtml':
+      return 'application/xhtml+xml';
+    case 'rss':
+      return 'application/rss+xml';
+    case 'atom':
+      return 'application/atom+xml';
+    case 'gltf':
+      return 'model/gltf+json';
+    case 'glb':
+      return 'model/gltf-binary';
+    case 'jxl':
+      return 'image/jxl';
+    case 'tif':
+    case 'tiff':
+      return 'image/tiff';
+    case 'flac':
+      return 'audio/flac';
+    case 'aac':
+      return 'audio/aac';
+    case 'opus':
+    case 'oga':
+      return 'audio/ogg';
+    case 'ogv':
+      return 'video/ogg';
+    case 'm4v':
+      return 'video/mp4';
+    case 'zip':
+      return 'application/zip';
     default:
       return 'application/octet-stream';
   }
@@ -1332,108 +1545,25 @@ function postProjectPreviewMessage(message, transfer = []) {
   });
 }
 
-function resolveProjectPreviewHtml(content, filename, resourceVersion = null) {
-  const documentUrl = getProjectPreviewUrl(filename);
-  const rootUrl = getProjectPreviewUrl(`${getProjectPreviewSiteRootPath()}/`);
-  let baseUrl = documentUrl;
-  let foundBase = false;
-  const resolveUrl = (value, base) => {
-    const reference = String(value || '').trim();
-    if (!reference || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(reference)) return null;
-    try {
-      return reference.startsWith('/') && new URL(base).origin === location.origin
-        ? new URL(reference.slice(1), rootUrl)
-        : new URL(reference, base);
-    } catch { return null; }
-  };
-  // Honor the first authored base, including for references before that tag.
-  rewriteHtmlReferenceAttributes(content, (value, context) => {
-    if (!foundBase && context?.tagName === 'base' && context.attrName === 'href') {
-      foundBase = true;
-      try { baseUrl = resolveUrl(value, documentUrl)?.href || new URL(value, documentUrl).href; }
-      catch { baseUrl = documentUrl; }
-    }
-    return null;
-  });
-  return rewriteHtmlReferenceAttributes(content, (value, context) => {
-    const url = resolveUrl(value, context?.tagName === 'base' ? documentUrl : baseUrl);
-    if (!url || url.origin !== location.origin) return null;
-    if (context?.tagName !== 'base' && resourceVersion !== null) {
-      url.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(resourceVersion));
-    }
-    return url.href;
-  });
-}
-
-function createProjectPreviewNavigationBridge() {
-  const rootUrl = JSON.stringify(getProjectPreviewUrl(`${getProjectPreviewSiteRootPath()}/`)).replace(/</g, '\\u003c');
-  const sessionRoot = JSON.stringify(getProjectPreviewUrl('/')).replace(/</g, '\\u003c');
-  return `<script data-html-viewer-project-navigation>
-(() => {
-  const root = new URL(${rootUrl});
-  const sessionRoot = new URL(${sessionRoot});
-  const attributes = { A: 'href', AREA: 'href', FORM: 'action', BUTTON: 'formaction', INPUT: 'formaction', IFRAME: 'src', FRAME: 'src', BASE: 'href', OBJECT: 'data', EMBED: 'src' };
-  const rewrite = element => {
-    const attribute = attributes[element.tagName];
-    if (!attribute) return;
-    const value = (element.getAttribute(attribute) || '').trim();
-    if (!value || value.startsWith('//')) return;
-    try {
-      const url = new URL(value, document.baseURI);
-      if (url.origin !== root.origin || url.pathname.startsWith(sessionRoot.pathname)) return;
-      if (!value.startsWith('/') && !/^https?:/i.test(value)) return;
-      const target = new URL(url.pathname.slice(1), root);
-      target.search = url.search;
-      target.hash = url.hash;
-      if (target.href !== url.href) element.setAttribute(attribute, target.href);
-    } catch {}
-  };
-  const scan = node => {
-    if (node.nodeType !== 1) return;
-    rewrite(node);
-    node.querySelectorAll('a[href],area[href],form[action],button[formaction],input[formaction],iframe[src],frame[src],base[href],object[data],embed[src]').forEach(rewrite);
-  };
-  new MutationObserver(records => {
-    for (const record of records) {
-      if (record.type === 'attributes') rewrite(record.target);
-      else record.addedNodes.forEach(scan);
-    }
-  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['href', 'src', 'action', 'formaction', 'data'] });
-  for (const type of ['pointerdown', 'click', 'auxclick']) {
-    document.addEventListener(type, event => {
-      const link = event.composedPath().find(node => node?.matches?.('a[href],area[href]'));
-      if (link) rewrite(link);
-    }, true);
-  }
-  document.addEventListener('submit', event => {
-    rewrite(event.target);
-    if (event.submitter) rewrite(event.submitter);
-  }, true);
-  scan(document.documentElement);
-})();
-</script>`;
-}
-
-function createProjectPreviewEntry(file, resolver, renderToken = '') {
+function createProjectPreviewEntry(file, renderToken = '') {
   if (!file || file.isFolder) return null;
   const cleanPath = normalizeProjectPath(file.name);
   if (!cleanPath) return null;
 
   const ext = getFileExtension(cleanPath);
   const isHtml = ext === 'html' || ext === 'htm';
-  const isCss = ext === 'css';
-  const rawContent = file.isBinary ? null : getFileText(file);
+  // Files are served exactly as authored: the page runs at its own clean URL,
+  // so relative and root-relative references resolve like on a real host.
+  // HTML only gains the preview runtime as its first script.
   let content = null;
   if (!file.isBinary) {
+    content = getFileText(file);
     if (isHtml) {
-      content = applyNonDraggableImageGuard(
-        injectPreviewGuardIntoHtml(resolveProjectPreviewHtml(rawContent, cleanPath, renderToken), '', createProjectPreviewNavigationBridge()),
-        { preventPreviewFocus: previewBlockFocusForCurrentRender, renderToken }
-      );
-    } else if (isCss) {
-      content = resolveCssUrlsLazy(rawContent, cleanPath, resolver);
-    } else {
-      content = rawContent;
+      content = applyNonDraggableImageGuard(content, {
+        preventPreviewFocus: previewBlockFocusForCurrentRender,
+        renderToken,
+        mode: 'project'
+      });
     }
   }
 
@@ -1451,20 +1581,10 @@ async function collectProjectPreviewEntries(paths = null, resourceVersion = null
   const entries = [];
   let processed = 0;
   const fileLookup = createProjectFileLookup();
-  const resolver = (canonicalPath) => {
-    const cleanPath = normalizeProjectPath(canonicalPath);
-    // A root-relative reference can produce two candidates: the workspace
-    // path and the site's common root. Only resolve the candidate that really
-    // exists; otherwise `/nested/page.html` would silently point outside a
-    // project rooted at `proyecto/`.
-    return cleanPath && fileLookup.has(cleanPath.toLowerCase())
-      ? getProjectPreviewUrl(cleanPath, resourceVersion)
-      : null;
-  };
 
   if (selectedPaths) {
     for (const cleanPath of selectedPaths) {
-      const entry = createProjectPreviewEntry(fileLookup.get(cleanPath.toLowerCase()), resolver, resourceVersion);
+      const entry = createProjectPreviewEntry(fileLookup.get(cleanPath.toLowerCase()), resourceVersion);
       if (entry) entries.push(entry);
       processed += 1;
       if (processed % 80 === 0) {
@@ -1475,7 +1595,7 @@ async function collectProjectPreviewEntries(paths = null, resourceVersion = null
   }
 
   for (const file of files) {
-    const entry = createProjectPreviewEntry(file, resolver, resourceVersion);
+    const entry = createProjectPreviewEntry(file, resourceVersion);
     if (!entry) continue;
     entries.push(entry);
 
@@ -1517,10 +1637,60 @@ function getProjectPreviewPathFromUrl(urlValue) {
   }
 }
 
+// A page served by the preview worker shows its published URL
+// (`/servicios/x`); everything else in the editor reasons about the worker
+// URL that served it. Only primitive values are read from the page.
+function readPreviewRuntimeInfo(previewWindow) {
+  try {
+    const info = previewWindow?.__htmlViewerPreview;
+    if (!info || info.session !== projectPreviewSessionId) return null;
+    const fields = ['siteRoot', 'version', 'sourceHref', 'prettyPathname'];
+    if (!fields.every(field => typeof info[field] === 'string')) return null;
+    return { siteRoot: info.siteRoot, version: info.version, sourceHref: info.sourceHref, prettyPathname: info.prettyPathname };
+  } catch {
+    return null;
+  }
+}
+
+// Project path for a published-style (root-relative) URL path.
+function getProjectPathFromSitePathname(pathname, siteRoot = getProjectPreviewSiteRootPath()) {
+  const decoded = decodeUrlPathComponent(pathname);
+  return normalizeProjectPath(siteRoot ? `${siteRoot}/${decoded}` : decoded, { folder: decoded.endsWith('/') });
+}
+
+function getProjectPreviewUrlForSiteUrl(urlValue, version = null, siteRoot = getProjectPreviewSiteRootPath()) {
+  const url = new URL(urlValue, location.href);
+  const target = new URL(getProjectPreviewUrl(getProjectPathFromSitePathname(url.pathname, siteRoot) || `${siteRoot}/`));
+  target.search = url.search;
+  target.hash = url.hash;
+  if (version !== null && version !== undefined && version !== '') {
+    target.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(version));
+  }
+  return target.href;
+}
+
 function getPreviewIframeUrl() {
   if (!previewIframe) return '';
   try {
-    return previewIframe.contentWindow?.location?.href || previewIframe.src || '';
+    const previewWindow = previewIframe.contentWindow;
+    const href = previewWindow?.location?.href || '';
+    const info = href && readPreviewRuntimeInfo(previewWindow);
+    if (info?.prettyPathname) {
+      const current = new URL(href);
+      if (current.origin === location.origin && !getProjectPreviewPathFromUrl(current.href)) {
+        if (current.pathname === info.prettyPathname) {
+          // Same page as served: keep the exact worker URL (`index.html`).
+          const source = new URL(info.sourceHref);
+          source.search = current.search;
+          source.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, info.version);
+          source.hash = current.hash;
+          return source.href;
+        }
+        // The page changed its own route (pushState).
+        return getProjectPreviewUrlForSiteUrl(current.href, info.version, info.siteRoot);
+      }
+    }
+    return href || previewIframe.src || '';
   } catch {
     return previewIframe.src || '';
   }
@@ -1534,7 +1704,7 @@ function setProjectPreviewLocation(urlValue, fallbackPath = '') {
     const url = new URL(urlValue, location.href);
     path = getProjectPreviewPathFromUrl(url.href) || path;
     if (!path && previewLifecycle.mode === 'project' && url.origin === location.origin) {
-      path = normalizeProjectPath(url.pathname);
+      path = getProjectPathFromSitePathname(url.pathname);
     }
     search = url.search;
     hash = url.hash;
@@ -1551,6 +1721,30 @@ function resetProjectPreviewLocation() {
   previewLifecycle.projectPath = '';
   previewLifecycle.projectSearch = '';
   previewLifecycle.projectHash = '';
+}
+
+// `dist/index.html`, `dist/` and `dist` are all the entry page.
+function isEntryProjectPreviewPath(path) {
+  const entryFile = getEntryFile();
+  const cleanPath = normalizeProjectPath(path);
+  if (!entryFile || !cleanPath) return false;
+  if (cleanPath.toLowerCase() === normalizeProjectPath(entryFile.name).toLowerCase()) return true;
+  return findProjectFileByStaticRoute(cleanPath)?.id === entryFile.id && !/\.[^/.]+$/.test(cleanPath.split('/').pop() || '');
+}
+
+// The route the page would have when published, e.g. `/servicios/tasaciones`.
+function getProjectPreviewSiteRoute(path) {
+  const cleanPath = normalizeProjectPath(path);
+  const siteRoot = getProjectPreviewSiteRootPath();
+  const inSite = siteRoot && cleanPath.toLowerCase().startsWith(`${siteRoot.toLowerCase()}/`)
+    ? cleanPath.slice(siteRoot.length + 1)
+    : (cleanPath.toLowerCase() === siteRoot.toLowerCase() ? '' : cleanPath);
+  return `/${inSite.replace(/(^|\/)index\.html?$/i, '$1')}`;
+}
+
+function getPreviewSitePathLabel(path) {
+  const route = getProjectPreviewSiteRoute(path);
+  return route.length > 42 ? `…${route.slice(-41)}` : route;
 }
 
 function getCompactPreviewPath(path) {
@@ -1584,12 +1778,14 @@ function syncProjectPreviewNavigationState({ preferExpected = true } = {}) {
   }
 
   const currentUrl = getPreviewIframeUrl();
+  // A frame that is between documents has no location of its own yet.
+  if (!currentUrl) return false;
   let currentPath = getProjectPreviewPathFromUrl(currentUrl);
   if (!currentPath && previewLifecycle.mode === 'project') {
     try {
       const url = new URL(currentUrl, location.href);
       if (url.origin === location.origin) {
-        currentPath = normalizeProjectPath(url.pathname);
+        currentPath = getProjectPathFromSitePathname(url.pathname);
       }
     } catch {}
   }
@@ -1604,10 +1800,9 @@ function syncProjectPreviewNavigationState({ preferExpected = true } = {}) {
   } else {
     projectPreviewMissingPath = '';
     projectPreviewNotifiedMissingPath = '';
-    const entryPath = normalizeProjectPath(getEntryFile()?.name || '');
-    const label = currentPath.toLowerCase() === entryPath.toLowerCase()
+    const label = isEntryProjectPreviewPath(currentPath)
       ? PREVIEW_READY_LABEL
-      : `Viendo: ${getCompactPreviewPath(currentPath)}`;
+      : `${t('preview_viewing')}: ${getPreviewSitePathLabel(currentPath)}`;
     setPreviewStatus(label, 'ready');
   }
 
@@ -1964,7 +2159,7 @@ async function createRecordFromBrowserFile(file, targetPath = '') {
   const uniquePath = getUniquePath(desiredPath);
 
   if (shouldReadFileAsText(file)) {
-    return createTextFileRecord(uniquePath, await file.text(), {
+    return createTextFileRecord(uniquePath, await readTextFile(file), {
       mimeType: file.type || getMimeTypeForFilename(uniquePath),
       size: file.size
     });
@@ -2817,52 +3012,15 @@ function injectPreviewGuardIntoHtml(htmlContent, guardStyle, guardScript) {
   return `${payload}\n${result}`;
 }
 
-function createPreviewDiagnosticsBridge(renderToken = '') {
-  const fallbackRenderToken = JSON.stringify(String(renderToken ?? ''));
-  return `<script data-html-viewer-diagnostics>
-(() => {
-  if (window.__htmlViewerDiagnosticsInstalled) return;
-  window.__htmlViewerDiagnosticsInstalled = true;
-  const channel = 'html-viewer-preview-diagnostic';
-  const fallbackRenderToken = ${fallbackRenderToken};
-  const getRenderToken = () => {
-    try { return new URL(location.href).searchParams.get(${JSON.stringify(PROJECT_PREVIEW_VERSION_PARAM)}) || fallbackRenderToken; }
-    catch { return fallbackRenderToken; }
-  };
-  const text = value => {
-    if (value instanceof Error) return value.stack || value.message;
-    if (typeof value === 'string') return value;
-    try { return JSON.stringify(value); } catch { return String(value); }
-  };
-  const send = (type, message, details = {}) => {
-    try { parent.postMessage({ channel, type, message: text(message), url: location.href, time: Date.now(), renderToken: getRenderToken(), ...details }, '*'); } catch {}
-  };
-  ['error', 'warn'].forEach(level => {
-    const original = console[level];
-    console[level] = function(...args) {
-      send(level === 'error' ? 'error' : 'warning', args.map(text).join(' '), { source: 'console' });
-      return original.apply(this, args);
-    };
-  });
-  addEventListener('error', event => {
-    const target = event.target;
-    if (target && target !== window) {
-      send('resource', 'No se pudo cargar el recurso', { resourceUrl: target.src || target.href || target.currentSrc || '', tag: target.tagName || '' });
-      return;
-    }
-    send('error', event.message || 'Error JavaScript', { sourceUrl: event.filename || '', line: event.lineno || 0, column: event.colno || 0, stack: event.error?.stack || '' });
-  }, true);
-  addEventListener('unhandledrejection', event => send('error', event.reason || 'Promesa rechazada sin gestionar', { source: 'promise' }));
-  send('ready', 'preview-runtime-ready');
-})();
-</script>`;
-}
-
-function applyNonDraggableImageGuard(htmlContent, { preventPreviewFocus = false, renderToken = '' } = {}) {
+// Every preview document gets the runtime (diagnostics, isolated storage
+// and, in Files, clean URLs and project navigation) as its first script, plus
+// the render token the editor uses to recognise the load it requested.
+function applyNonDraggableImageGuard(htmlContent, { preventPreviewFocus = false, renderToken = '', mode = 'document' } = {}) {
   void preventPreviewFocus;
   const guardAttribute = 'data-html-viewer-runtime';
-  const safeRenderToken = JSON.stringify(String(renderToken ?? ''));
-  const guardScript = `${createPreviewDiagnosticsBridge(renderToken)}\n<script ${guardAttribute}>
+  const safeRenderToken = JSON.stringify(String(renderToken ?? '')).replace(/</g, '\\u003c');
+  const guardScript = `${createPreviewRuntimeScript({ mode, renderToken })}
+<script ${guardAttribute}-token>
  (() => {
    try { document.documentElement?.setAttribute('data-html-viewer-render-token', ${safeRenderToken}); } catch {}
  })();
@@ -2899,6 +3057,686 @@ function resolveVirtualPaths(content, fileMap, entryFilename) {
   if (!entryFilename) entryFilename = 'index.html';
   const transform = refPath => resolveReferenceValue(refPath, fileMap, entryFilename);
   return rewriteHtmlReferenceAttributes(content, transform);
+}
+;
+
+/* ---- src/app/05b-preview-runtime.js ---- */
+// Runtime injected as the first script of every previewed document.
+//
+// The function below is serialized with Function#toString, so it must stay
+// self-contained: it may only use its `config` argument and browser globals.
+// It runs in two contexts:
+//
+// - `document` (Simple, srcdoc): usually an opaque sandboxed origin. Storage
+//   APIs that the sandbox blocks are replaced by in-memory equivalents whose
+//   contents the editor persists under its own namespace.
+// - `project` (Files, service worker): same origin as the editor, because the
+//   worker can only serve same-origin clients. The page sees its own clean URL
+//   (`/servicios/x` instead of the virtual worker path), gets storage that is
+//   scoped to the project and cannot register service workers or reach the
+//   editor's databases by accident. Local navigations are mapped back into the
+//   worker namespace so every page of the site can be visited.
+//
+// fetch, XHR, focus and input events are never wrapped.
+function htmlViewerPreviewRuntime(config) {
+  'use strict';
+  if (window.__htmlViewerRuntimeInstalled) return;
+  try {
+    Object.defineProperty(window, '__htmlViewerRuntimeInstalled', { value: true });
+  } catch {
+    return;
+  }
+
+  const DIAGNOSTIC_CHANNEL = 'html-viewer-preview-diagnostic';
+  const CONTROL_CHANNEL = 'html-viewer-preview-control';
+  const messages = config.messages || {};
+  const initialUrl = new URL(location.href);
+  const renderToken = initialUrl.searchParams.get(config.versionParam) || String(config.renderToken ?? '');
+  let embeddingFrame = null;
+  try { embeddingFrame = window.frameElement; } catch {}
+  // Only the document shown directly by the editor (or the full-page host)
+  // adopts clean URLs and delegates its navigations; nested frames and pages
+  // opened at top level keep the worker URL, which survives a reload.
+  const isPreviewRoot = Boolean(embeddingFrame?.hasAttribute?.('data-html-viewer-preview'));
+
+  const define = (target, name, descriptor) => {
+    try {
+      Object.defineProperty(target, name, { configurable: true, enumerable: true, ...descriptor });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const post = (channel, type, details = {}) => {
+    try {
+      if (window.parent !== window) {
+        window.parent.postMessage({ channel, type, renderToken, url: location.href, time: Date.now(), ...details }, '*');
+      }
+    } catch {}
+  };
+
+  // --- Diagnostics -------------------------------------------------------
+  const text = value => {
+    if (value instanceof Error) return value.stack || value.message;
+    if (typeof value === 'string') return value;
+    try { return JSON.stringify(value); } catch { return String(value); }
+  };
+  ['error', 'warn'].forEach(level => {
+    const original = console[level];
+    console[level] = function (...args) {
+      post(DIAGNOSTIC_CHANNEL, level === 'error' ? 'error' : 'warning', { message: args.map(text).join(' '), source: 'console' });
+      return original.apply(this, args);
+    };
+  });
+  addEventListener('error', event => {
+    const target = event.target;
+    if (target && target !== window) {
+      post(DIAGNOSTIC_CHANNEL, 'resource', {
+        message: messages.resource,
+        resourceUrl: target.currentSrc || target.src || target.href || target.data || '',
+        tag: target.tagName || ''
+      });
+      return;
+    }
+    post(DIAGNOSTIC_CHANNEL, 'error', {
+      message: text(event.message || messages.error),
+      sourceUrl: event.filename || '',
+      line: event.lineno || 0,
+      column: event.colno || 0,
+      stack: event.error?.stack || ''
+    });
+  }, true);
+  addEventListener('unhandledrejection', event => {
+    post(DIAGNOSTIC_CHANNEL, 'error', { message: text(event.reason || messages.rejection), source: 'promise' });
+  });
+  addEventListener('pointerdown', () => post(CONTROL_CHANNEL, 'interaction'), true);
+
+  // --- Storage -----------------------------------------------------------
+  const wrapStorage = (api, listKeys) => new Proxy(api, {
+    get(target, property) {
+      if (typeof property === 'symbol' || property in target) {
+        const value = Reflect.get(target, property);
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      const value = target.getItem(property);
+      return value === null ? undefined : value;
+    },
+    set(target, property, value) {
+      if (typeof property === 'symbol' || property in target) return Reflect.set(target, property, value);
+      target.setItem(property, value);
+      return true;
+    },
+    has(target, property) {
+      return property in target || (typeof property === 'string' && target.getItem(property) !== null);
+    },
+    deleteProperty(target, property) {
+      if (typeof property === 'string' && !(property in target)) target.removeItem(property);
+      return true;
+    },
+    ownKeys() {
+      return listKeys();
+    },
+    getOwnPropertyDescriptor(target, property) {
+      if (typeof property !== 'string' || property in target) return Reflect.getOwnPropertyDescriptor(target, property);
+      const value = target.getItem(property);
+      return value === null ? undefined : { value, writable: true, enumerable: true, configurable: true };
+    }
+  });
+
+  const createMemoryStorage = (initial, onChange) => {
+    const map = new Map();
+    Object.entries(initial || {}).forEach(([key, value]) => map.set(String(key), String(value)));
+    const api = {
+      getItem(key) { key = String(key); return map.has(key) ? map.get(key) : null; },
+      setItem(key, value) { map.set(String(key), String(value)); onChange(); },
+      removeItem(key) { if (map.delete(String(key))) onChange(); },
+      clear() { if (map.size) { map.clear(); onChange(); } },
+      key(index) { return Array.from(map.keys())[index] ?? null; },
+      get length() { return map.size; }
+    };
+    return { storage: wrapStorage(api, () => Array.from(map.keys())), dump: () => Object.fromEntries(map) };
+  };
+
+  const createScopedStorage = (native, prefix) => {
+    const keys = () => {
+      const result = [];
+      for (let index = 0; index < native.length; index += 1) {
+        const key = native.key(index);
+        if (key !== null && key.startsWith(prefix)) result.push(key.slice(prefix.length));
+      }
+      return result;
+    };
+    const api = {
+      getItem(key) { return native.getItem(prefix + String(key)); },
+      setItem(key, value) { native.setItem(prefix + String(key), String(value)); },
+      removeItem(key) { native.removeItem(prefix + String(key)); },
+      clear() { keys().forEach(key => native.removeItem(prefix + key)); },
+      key(index) { return keys()[index] ?? null; },
+      get length() { return keys().length; }
+    };
+    return wrapStorage(api, keys);
+  };
+
+  // A small cookie jar: name/value pairs with expiry. Domain, path and secure
+  // attributes have no meaning for a local preview.
+  const createCookieJar = (serialized, persist) => {
+    const jar = new Map();
+    try {
+      for (const [name, value, expires] of JSON.parse(serialized || '[]')) {
+        jar.set(String(name), { value: String(value), expires: expires === null ? null : Number(expires) });
+      }
+    } catch {}
+    const purge = () => {
+      const now = Date.now();
+      for (const [name, cookie] of jar) if (cookie.expires !== null && cookie.expires <= now) jar.delete(name);
+    };
+    return {
+      read() {
+        purge();
+        return Array.from(jar, ([name, cookie]) => (name ? `${name}=${cookie.value}` : cookie.value)).join('; ');
+      },
+      write(value) {
+        const [pair = '', ...attributes] = String(value).split(';');
+        const separator = pair.indexOf('=');
+        const name = separator >= 0 ? pair.slice(0, separator).trim() : '';
+        const cookieValue = separator >= 0 ? pair.slice(separator + 1).trim() : pair.trim();
+        let expires = null;
+        for (const attribute of attributes) {
+          const index = attribute.indexOf('=');
+          const key = (index >= 0 ? attribute.slice(0, index) : attribute).trim().toLowerCase();
+          const attributeValue = index >= 0 ? attribute.slice(index + 1).trim() : '';
+          if (key === 'max-age' && attributeValue !== '' && Number.isFinite(Number(attributeValue))) {
+            expires = Date.now() + Number(attributeValue) * 1000;
+          } else if (key === 'expires' && expires === null) {
+            const time = Date.parse(attributeValue);
+            if (!Number.isNaN(time)) expires = time;
+          }
+        }
+        if (expires !== null && expires <= Date.now()) jar.delete(name);
+        else jar.set(name, { value: cookieValue, expires });
+        persist();
+      },
+      serialize() {
+        purge();
+        return JSON.stringify(Array.from(jar, ([name, cookie]) => [name, cookie.value, cookie.expires]));
+      }
+    };
+  };
+
+  let nativeStorage = null;
+  try {
+    nativeStorage = { local: window.localStorage, session: window.sessionStorage };
+    nativeStorage.local.length;
+  } catch {
+    nativeStorage = null;
+  }
+
+  if (!nativeStorage) {
+    // Opaque origin: the sandbox blocks storage. Pages still get working
+    // Web Storage and cookies; the editor keeps them between renders.
+    const snapshot = config.storage || {};
+    let queued = false;
+    let jar;
+    const flush = () => {
+      queued = false;
+      post(CONTROL_CHANNEL, 'storage', { local: local.dump(), session: session.dump(), cookies: jar.serialize() });
+    };
+    const changed = () => {
+      if (queued) return;
+      queued = true;
+      queueMicrotask(flush);
+    };
+    const local = createMemoryStorage(snapshot.local, changed);
+    const session = createMemoryStorage(snapshot.session, changed);
+    jar = createCookieJar(snapshot.cookies, changed);
+    define(window, 'localStorage', { get: () => local.storage });
+    define(window, 'sessionStorage', { get: () => session.storage });
+    define(document, 'cookie', { get: () => jar.read(), set: value => jar.write(value) });
+  } else if (config.namespace) {
+    const prefix = `__hv:${config.namespace}:`;
+    const local = createScopedStorage(nativeStorage.local, prefix);
+    const session = createScopedStorage(nativeStorage.session, prefix);
+    const cookieKey = `__hvc:${config.namespace}`;
+    let jar;
+    jar = createCookieJar(nativeStorage.local.getItem(cookieKey), () => {
+      try { nativeStorage.local.setItem(cookieKey, jar.serialize()); } catch {}
+    });
+    define(window, 'localStorage', { get: () => local });
+    define(window, 'sessionStorage', { get: () => session });
+    define(document, 'cookie', { get: () => jar.read(), set: value => jar.write(value) });
+
+    try {
+      const factory = window.indexedDB;
+      const open = factory.open;
+      const remove = factory.deleteDatabase;
+      const list = factory.databases;
+      define(factory, 'open', { writable: true, value(name, ...rest) { return open.call(factory, prefix + String(name), ...rest); } });
+      define(factory, 'deleteDatabase', { writable: true, value(name, ...rest) { return remove.call(factory, prefix + String(name), ...rest); } });
+      if (typeof list === 'function') {
+        define(factory, 'databases', {
+          writable: true,
+          value() {
+            return list.call(factory).then(items => items
+              .filter(item => String(item.name).startsWith(prefix))
+              .map(item => ({ ...item, name: item.name.slice(prefix.length) })));
+          }
+        });
+      }
+    } catch {}
+
+    try {
+      const cacheStorage = window.caches;
+      const methods = {};
+      ['open', 'has', 'delete', 'keys', 'match'].forEach(name => { methods[name] = cacheStorage[name]; });
+      const ownNames = () => methods.keys.call(cacheStorage)
+        .then(names => names.filter(name => name.startsWith(prefix)).map(name => name.slice(prefix.length)));
+      ['open', 'has', 'delete'].forEach(name => {
+        define(cacheStorage, name, { writable: true, value(cacheName, ...rest) { return methods[name].call(cacheStorage, prefix + String(cacheName), ...rest); } });
+      });
+      define(cacheStorage, 'keys', { writable: true, value: ownNames });
+      define(cacheStorage, 'match', {
+        writable: true,
+        async value(request, options = {}) {
+          const names = options.cacheName !== undefined ? [String(options.cacheName)] : await ownNames();
+          for (const name of names) {
+            if (!(await methods.has.call(cacheStorage, prefix + name))) continue;
+            const cache = await methods.open.call(cacheStorage, prefix + name);
+            const response = await cache.match(request, options);
+            if (response) return response;
+          }
+          return undefined;
+        }
+      });
+    } catch {}
+  }
+
+  // The preview's own service worker serves the project. Pages must neither
+  // replace it nor unregister it ("unregister all workers" snippets are
+  // common), so they see a container without registrations.
+  const unavailableWorkers = () => Promise.reject(new DOMException(messages.serviceWorker || 'Service workers are disabled in the preview.', 'SecurityError'));
+  const workerContainer = {
+    controller: null,
+    ready: new Promise(() => {}),
+    oncontrollerchange: null,
+    onmessage: null,
+    onmessageerror: null,
+    register: unavailableWorkers,
+    getRegistration: () => Promise.resolve(undefined),
+    getRegistrations: () => Promise.resolve([]),
+    startMessages() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() { return true; }
+  };
+  define(navigator, 'serviceWorker', { get: () => workerContainer });
+
+  if (config.mode !== 'project') {
+    post(DIAGNOSTIC_CHANNEL, 'ready', { message: 'preview-runtime-ready' });
+    return;
+  }
+
+  // --- Project URLs ------------------------------------------------------
+  const encodePath = value => String(value || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  const namespaceRoot = `${config.appBase}${config.marker}/`;
+  const sessionRoot = `${namespaceRoot}${encodeURIComponent(config.session)}/`;
+  const encodedSiteRoot = encodePath(config.siteRoot);
+  const siteBase = new URL(`${sessionRoot}${encodedSiteRoot ? `${encodedSiteRoot}/` : ''}`, location.origin);
+  const hostPath = `${config.appBase}${config.hostPage}`;
+
+  const resolve = value => {
+    try { return new URL(String(value), document.baseURI); } catch { return null; }
+  };
+  const isNamespaced = url => url.pathname.startsWith(namespaceRoot);
+  const withoutVersion = url => {
+    const copy = new URL(url.href);
+    copy.searchParams.delete(config.versionParam);
+    return copy;
+  };
+  // Worker URL -> the URL the site would have when published.
+  const toPretty = url => {
+    if (!url.pathname.startsWith(sessionRoot)) return null;
+    let rest = url.pathname.slice(sessionRoot.length);
+    if (encodedSiteRoot) {
+      if (rest.toLowerCase() === encodedSiteRoot.toLowerCase()) rest = '';
+      else if (rest.toLowerCase().startsWith(`${encodedSiteRoot.toLowerCase()}/`)) rest = rest.slice(encodedSiteRoot.length + 1);
+      else return null;
+    }
+    rest = rest.replace(/(^|\/)index\.html?$/i, '$1');
+    const pretty = withoutVersion(new URL(`/${rest}`, location.origin));
+    pretty.search = withoutVersion(url).search;
+    pretty.hash = url.hash;
+    return pretty;
+  };
+  const fromHost = url => (url.pathname === hostPath && url.hash.startsWith('#/') ? resolve(url.hash.slice(1)) : url);
+  // Any same-origin URL -> the worker URL that serves it.
+  const toProject = value => {
+    let url = resolve(value);
+    if (!url || url.origin !== location.origin) return null;
+    url = fromHost(url);
+    if (!url || isNamespaced(url)) return url?.href || null;
+    const target = new URL(url.pathname.replace(/^\/+/, ''), siteBase);
+    target.search = url.search;
+    target.hash = url.hash;
+    return target.href;
+  };
+  // Any same-origin URL -> the full-page host showing it in a new window.
+  const toHost = value => {
+    let url = resolve(value);
+    if (!url || url.origin !== location.origin) return null;
+    url = fromHost(url);
+    const pretty = url && (isNamespaced(url) ? toPretty(url) : url);
+    if (!pretty) return null;
+    const host = new URL(hostPath, location.origin);
+    host.searchParams.set('session', config.session);
+    if (config.siteRoot) host.searchParams.set('root', config.siteRoot);
+    host.hash = `${pretty.pathname}${pretty.search}${pretty.hash}`;
+    return host.href;
+  };
+
+  let prettyPathname = '';
+  if (isPreviewRoot) {
+    const pretty = toPretty(initialUrl);
+    if (pretty) {
+      prettyPathname = pretty.pathname;
+      try { history.replaceState(history.state, '', pretty.href); } catch { prettyPathname = ''; }
+    }
+  }
+  // Read by the editor, the full-page host and the out-of-scope guard pages.
+  Object.defineProperty(window, '__htmlViewerPreview', {
+    value: Object.freeze({
+      session: String(config.session),
+      siteRoot: String(config.siteRoot || ''),
+      version: renderToken,
+      sourceHref: initialUrl.href,
+      prettyPathname,
+      siteBase: siteBase.href
+    })
+  });
+
+  // `href="#"` has an empty fragment but is still a same-document link.
+  const sameDocument = url => url.href.includes('#') && url.href.split('#')[0] === location.href.split('#')[0];
+  const targetKind = rawTarget => {
+    const target = String(rawTarget ?? '').trim();
+    const lower = target.toLowerCase();
+    if (!target || lower === '_self') return 'self';
+    if (lower === '_top' || lower === '_parent') return isPreviewRoot || window.parent === window ? 'self' : 'frame';
+    if (lower === '_blank') return 'window';
+    try {
+      const name = CSS.escape(target);
+      if (document.querySelector(`iframe[name="${name}"],frame[name="${name}"],object[name="${name}"]`)) return 'frame';
+    } catch {}
+    return 'window';
+  };
+  const baseTarget = () => document.querySelector('base[target]')?.getAttribute('target') || '';
+  const navigateSelf = href => {
+    if (isPreviewRoot) post(CONTROL_CHANNEL, 'navigate', { target: href });
+    else location.assign(toProject(href) || href);
+  };
+  // Point an attribute at a mapped URL just for the default action that is
+  // about to run, then restore what the page authored.
+  const swapAttribute = (element, attribute, value) => {
+    if (!value) return;
+    const previous = element.getAttribute(attribute);
+    if (previous === value) return;
+    element.setAttribute(attribute, value);
+    setTimeout(() => {
+      if (element.getAttribute(attribute) !== value) return;
+      if (previous === null) element.removeAttribute(attribute);
+      else element.setAttribute(attribute, previous);
+    }, 0);
+  };
+
+  const findLink = event => event.composedPath().find(node => (
+    node?.nodeType === 1 && (node.localName === 'a' || node.localName === 'area') && node.hasAttribute('href')
+  ));
+  const handleLink = event => {
+    const link = findLink(event);
+    if (!link) return;
+    // SVG links expose an animated value instead of a resolved string.
+    const url = resolve(typeof link.href === 'string' ? link.href : link.getAttribute('href'));
+    if (!url || url.origin !== location.origin) return;
+    const kind = targetKind(link.getAttribute('target') ?? baseTarget());
+    const opensElsewhere = event.type !== 'click' || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey;
+    if (event.type === 'contextmenu' || link.hasAttribute('download')) {
+      swapAttribute(link, 'href', link.hasAttribute('download') ? toProject(url.href) : (toHost(url.href) || toProject(url.href)));
+      return;
+    }
+    if (event.defaultPrevented) return;
+    if (opensElsewhere || kind === 'window') {
+      swapAttribute(link, 'href', toHost(url.href) || toProject(url.href));
+      return;
+    }
+    if (kind === 'frame') {
+      swapAttribute(link, 'href', toProject(url.href));
+      return;
+    }
+    if (sameDocument(url) || (!isPreviewRoot && isNamespaced(url))) return;
+    event.preventDefault();
+    navigateSelf(url.href);
+  };
+  // Bubble listeners on window run after the page's own handlers, so pages
+  // that route their links themselves (SPAs, smooth scrolling) keep control.
+  addEventListener('click', handleLink);
+  addEventListener('auxclick', handleLink);
+  addEventListener('contextmenu', handleLink, true);
+
+  addEventListener('submit', event => {
+    if (event.defaultPrevented) return;
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    const submitter = event.submitter || null;
+    const action = submitter?.getAttribute?.('formaction') ?? form.getAttribute('action');
+    const url = resolve(action || location.href);
+    if (!url || url.origin !== location.origin) return;
+    const method = String(submitter?.getAttribute?.('formmethod') || form.getAttribute('method') || 'get').toLowerCase();
+    if (method === 'dialog') return;
+    const kind = targetKind(submitter?.getAttribute?.('formtarget') ?? form.getAttribute('target') ?? baseTarget());
+    if (method === 'get' && kind !== 'frame' && (kind === 'window' || isPreviewRoot)) {
+      event.preventDefault();
+      const destination = new URL(url.href);
+      destination.search = '';
+      let data;
+      try { data = new FormData(form, submitter || undefined); } catch { data = new FormData(form); }
+      for (const [name, value] of data) if (typeof value === 'string') destination.searchParams.append(name, value);
+      if (kind === 'window') window.open(destination.href, form.getAttribute('target') || '_blank');
+      else navigateSelf(destination.href);
+      return;
+    }
+    const element = submitter?.hasAttribute?.('formaction') ? submitter : form;
+    swapAttribute(element, element === form ? 'action' : 'formaction', toProject(url.href));
+  });
+
+  const nativeOpen = window.open;
+  define(window, 'open', {
+    writable: true,
+    value: function open(url, target, features) {
+      const resolved = url === undefined || url === null || String(url) === '' ? null : resolve(url);
+      if (resolved && resolved.origin === location.origin) {
+        const kind = targetKind(target === undefined ? '_blank' : target);
+        if (kind === 'self' && isPreviewRoot && !sameDocument(resolved)) {
+          navigateSelf(resolved.href);
+          return window;
+        }
+        url = kind === 'window' ? (toHost(resolved.href) || toProject(resolved.href)) : toProject(resolved.href);
+      }
+      return nativeOpen.call(window, url, target, features);
+    }
+  });
+
+  // Embedded documents navigate on insertion, before any click could be
+  // observed, so their URLs are mapped as soon as they appear.
+  const frameAttributes = { IFRAME: 'src', FRAME: 'src', OBJECT: 'data', EMBED: 'src' };
+  const mapFrame = element => {
+    const attribute = frameAttributes[element.tagName];
+    const value = attribute && element.getAttribute(attribute);
+    if (!value || /^(?:about|data|blob|javascript):/i.test(value.trim())) return;
+    const url = resolve(value);
+    if (!url || url.origin !== location.origin || isNamespaced(url)) return;
+    const mapped = toProject(url.href);
+    if (mapped && mapped !== url.href) element.setAttribute(attribute, mapped);
+  };
+  const scan = node => {
+    if (node.nodeType !== 1) return;
+    mapFrame(node);
+    node.querySelectorAll?.('iframe[src],frame[src],object[data],embed[src]').forEach(mapFrame);
+  };
+  new MutationObserver(records => {
+    for (const record of records) {
+      if (record.type === 'attributes') mapFrame(record.target);
+      else record.addedNodes.forEach(scan);
+    }
+  }).observe(document.documentElement || document, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['src', 'data']
+  });
+
+  if (isPreviewRoot) {
+    const report = () => post(CONTROL_CHANNEL, 'location', { title: document.title });
+    ['pushState', 'replaceState'].forEach(name => {
+      const original = history[name];
+      define(history, name, {
+        writable: true,
+        value: function (...args) {
+          const result = original.apply(this, args);
+          report();
+          return result;
+        }
+      });
+    });
+    addEventListener('popstate', report);
+    addEventListener('hashchange', report);
+    addEventListener('DOMContentLoaded', report);
+    // The browser would reload the published URL, which only the editor can
+    // serve: ask it to reload the page from the project instead.
+    try {
+      window.navigation?.addEventListener('navigate', event => {
+        if (event.navigationType !== 'reload' || !event.cancelable) return;
+        event.preventDefault();
+        navigateSelf(location.href);
+      });
+    } catch {}
+  }
+
+  post(DIAGNOSTIC_CHANNEL, 'ready', { message: 'preview-runtime-ready' });
+}
+
+// Storage that Simple previews created, kept under the editor's origin with a
+// namespace pages cannot read directly. Bounded so a page cannot exhaust the
+// editor's own quota.
+const PREVIEW_DOCUMENT_STORAGE_NAMESPACE = 'simple';
+const PREVIEW_DOCUMENT_STORAGE_LIMIT = 1024 * 1024;
+
+function readPreviewDocumentStorage() {
+  const snapshot = { local: {}, session: {}, cookies: '' };
+  const prefix = `__hv:${PREVIEW_DOCUMENT_STORAGE_NAMESPACE}:`;
+  const read = (storage, target) => {
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(prefix)) target[key.slice(prefix.length)] = storage.getItem(key);
+    }
+  };
+  try { read(localStorage, snapshot.local); } catch {}
+  try { read(sessionStorage, snapshot.session); } catch {}
+  try { snapshot.cookies = localStorage.getItem(`__hvc:${PREVIEW_DOCUMENT_STORAGE_NAMESPACE}`) || ''; } catch {}
+  return snapshot;
+}
+
+function writePreviewDocumentStorage(data) {
+  const prefix = `__hv:${PREVIEW_DOCUMENT_STORAGE_NAMESPACE}:`;
+  const areas = { local: data?.local, session: data?.session };
+  let size = String(data?.cookies || '').length;
+  for (const values of Object.values(areas)) {
+    if (!values || typeof values !== 'object') return false;
+    for (const [key, value] of Object.entries(values)) size += key.length + String(value).length;
+  }
+  if (size > PREVIEW_DOCUMENT_STORAGE_LIMIT) return false;
+  const replace = (storage, values) => {
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(prefix) && !Object.prototype.hasOwnProperty.call(values, key.slice(prefix.length))) storage.removeItem(key);
+    }
+    for (const [key, value] of Object.entries(values)) storage.setItem(prefix + key, String(value));
+  };
+  try {
+    replace(localStorage, areas.local);
+    replace(sessionStorage, areas.session);
+    localStorage.setItem(`__hvc:${PREVIEW_DOCUMENT_STORAGE_NAMESPACE}`, String(data.cookies || '[]'));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getProjectPreviewStorageNamespace() {
+  // One namespace per editor tab session and site root: a different project
+  // starts with clean storage, the same one keeps it across reloads.
+  const source = `${projectPreviewSessionId}|${getProjectPreviewSiteRootPath()}`;
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `p${(hash >>> 0).toString(36)}`;
+}
+
+function createPreviewRuntimeScript({ mode = 'document', renderToken = '' } = {}) {
+  const config = {
+    mode,
+    renderToken: String(renderToken ?? ''),
+    versionParam: PROJECT_PREVIEW_VERSION_PARAM,
+    marker: PROJECT_PREVIEW_PREFIX,
+    appBase: new URL(APP_ROOT_URL).pathname,
+    hostPage: PREVIEW_HOST_PAGE,
+    session: projectPreviewSessionId,
+    siteRoot: mode === 'project' ? getProjectPreviewSiteRootPath() : '',
+    namespace: mode === 'project' ? getProjectPreviewStorageNamespace() : PREVIEW_DOCUMENT_STORAGE_NAMESPACE,
+    storage: mode === 'document' ? readPreviewDocumentStorage() : null,
+    messages: {
+      resource: t('diag_resource_failed'),
+      error: t('diag_js_error'),
+      rejection: t('diag_unhandled_rejection'),
+      serviceWorker: t('diag_service_worker_disabled')
+    }
+  };
+  // Only `<` inside the data is escaped (`<` is an operator in the source);
+  // the source can still not close the element.
+  const data = JSON.stringify(config).replace(/</g, '\\u003c');
+  const source = `(${htmlViewerPreviewRuntime.toString()})(${data});`.replace(/<(?=\/script|!--)/gi, '\\x3c');
+  return `<script data-html-viewer-runtime>${source}</script>`;
+}
+
+// Namespaces of earlier sessions are removed after the same period the
+// preview worker keeps its sessions.
+function prunePreviewStorageNamespaces() {
+  const registryKey = 'html-viewer:preview-storage';
+  const maxAge = 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  let registry = {};
+  try { registry = JSON.parse(localStorage.getItem(registryKey) || '{}') || {}; } catch {}
+  const current = getProjectPreviewStorageNamespace();
+  registry[current] = now;
+  const expired = Object.keys(registry).filter(namespace => namespace !== PREVIEW_DOCUMENT_STORAGE_NAMESPACE && now - Number(registry[namespace]) > maxAge);
+  expired.forEach(namespace => delete registry[namespace]);
+  try {
+    localStorage.setItem(registryKey, JSON.stringify(registry));
+    for (const storage of [localStorage, sessionStorage]) {
+      for (let index = storage.length - 1; index >= 0; index -= 1) {
+        const key = storage.key(index) || '';
+        const match = /^__hvc?:([^:]+)/.exec(key);
+        if (match && expired.includes(match[1])) storage.removeItem(key);
+      }
+    }
+  } catch {}
+  if (!expired.length) return;
+  const isExpired = name => expired.some(namespace => String(name).startsWith(`__hv:${namespace}:`));
+  indexedDB?.databases?.().then(list => list.forEach(item => {
+    if (isExpired(item.name)) indexedDB.deleteDatabase(item.name);
+  })).catch(() => {});
+  window.caches?.keys().then(names => names.forEach(name => {
+    if (isExpired(name)) caches.delete(name);
+  })).catch(() => {});
 }
 ;
 
@@ -3120,71 +3958,6 @@ function generateBlobUrls() {
   });
 }
 
-function createVirtualFileUrlSnapshot() {
-  const fileMap = {};
-  const urlsToRevoke = [];
-
-  files.forEach(file => {
-    if (file.isFolder) return;
-    const ext = getFileExtension(file.name);
-    const isFont = ['woff', 'woff2', 'ttf', 'otf', 'eot'].includes(ext);
-    if (isFont && file.dataUrl) {
-      fileMap[file.name] = file.dataUrl;
-      return;
-    }
-    const url = URL.createObjectURL(getFileBlob(file));
-    fileMap[file.name] = url;
-    urlsToRevoke.push(url);
-  });
-
-  files.forEach(file => {
-    if (file.isFolder || file.isBinary) return;
-    const ext = getFileExtension(file.name);
-    if (ext !== 'html' && ext !== 'htm' && ext !== 'css') return;
-
-    const rawContent = getFileText(file);
-    const resolvedContent = ext === 'css'
-      ? resolveCssUrls(rawContent, fileMap, file.name)
-      : resolveVirtualPaths(rawContent, fileMap, file.name);
-
-    const rewrittenUrl = URL.createObjectURL(getFileBlob(file, resolvedContent));
-    fileMap[file.name] = rewrittenUrl;
-    urlsToRevoke.push(rewrittenUrl);
-  });
-
-  return { fileMap, urlsToRevoke };
-}
-
-function createFullPagePreviewSnapshot() {
-  if (editorMode === 'unified') {
-    return {
-      code: applyNonDraggableImageGuard(getCurrentPreviewCode()),
-      urlsToRevoke: []
-    };
-  }
-
-  const entryFile = getEntryFile();
-  if (!entryFile) {
-    return {
-      code: createEmptyProjectPreviewCode(),
-      urlsToRevoke: []
-    };
-  }
-
-  const previewCode = applyNonDraggableImageGuard(getCurrentPreviewCode());
-  const previewUrlMap = { ...virtualBlobUrls };
-  const { fileMap, urlsToRevoke } = createVirtualFileUrlSnapshot();
-  let code = previewCode;
-
-  Object.entries(previewUrlMap).forEach(([path, previewUrl]) => {
-    const snapshotUrl = fileMap[path];
-    if (!previewUrl || !snapshotUrl) return;
-    code = code.split(previewUrl).join(snapshotUrl);
-  });
-
-  return { code, urlsToRevoke };
-}
-
 function captureExportRevision() {
   return {
     projectIdentity,
@@ -3267,28 +4040,56 @@ preloadFontDataUrls();
 ;
 
 /* ---- src/app/07-preview-editor.js ---- */
-const previewNavigationObservedDocuments = new WeakSet();
+// Simple documents run in an opaque origin: they cannot reach the editor, its
+// storage or its databases. Files previews need the editor's origin because
+// only same-origin clients can be served by the preview service worker; their
+// runtime scopes storage and keeps navigation inside the project instead.
+function setPreviewFrameIsolation(sameOrigin) {
+  if (!previewIframe) return;
+  const sandbox = sameOrigin ? `${PREVIEW_SANDBOX_TOKENS} allow-same-origin` : PREVIEW_SANDBOX_TOKENS;
+  if (previewIframe.getAttribute('sandbox') !== sandbox) previewIframe.setAttribute('sandbox', sandbox);
+}
 
-function handlePreviewRuntimeReady(event) {
+// Messages the preview runtime sends about the user's interaction with the
+// page. They are only trusted from the iframe's current document.
+function handlePreviewControlMessage(event) {
   const message = event.data;
   if (
     !message ||
-    message.channel !== 'html-viewer-preview-diagnostic' ||
-    message.type !== 'ready' ||
-    event.source !== previewIframe?.contentWindow
+    message.channel !== 'html-viewer-preview-control' ||
+    !previewIframe ||
+    event.source !== previewIframe.contentWindow
   ) return;
 
-  const expectedToken = previewLifecycle.expectedNavigation?.token;
-  const activeToken = previewLifecycle.activeDiagnosticToken;
-  if (
-    String(message.renderToken || '') !== String(expectedToken || '') &&
-    String(message.renderToken || '') !== String(activeToken || '')
-  ) return;
-  bindPreviewNavigationObserver();
+  if (message.type === 'interaction') {
+    previewLastUserInteractionAt = performance.now();
+    previewShouldRestoreEditorFocus = false;
+  } else if (message.type === 'navigate') {
+    if (editorMode === 'split' && previewLifecycle.mode === 'project' && typeof message.target === 'string') {
+      navigatePreviewFromUserAction(message.target, { reason: message.recover ? 'recover' : 'link' });
+    }
+  } else if (message.type === 'location') {
+    if (editorMode !== 'split' || previewLifecycle.mode !== 'project' || previewLifecycle.expectedNavigation) return;
+    if (syncProjectPreviewNavigationState({ preferExpected: false })) {
+      const entryPath = normalizeProjectPath(getEntryFile()?.name || '');
+      setPreviewAwayFromHome(!isEntryProjectPreviewPath(previewLifecycle.projectPath || entryPath));
+    }
+  } else if (message.type === 'storage') {
+    if (previewLifecycle.mode === 'srcdoc') writePreviewDocumentStorage(message);
+  }
+}
+
+// Blob URLs belong to the editor's origin; an opaque document cannot load
+// them, so a Simple document that uses project files keeps that origin.
+let previewCodeUsesEditorBlobs = false;
+function trackEditorBlobUrl(url) {
+  if (typeof url === 'string' && url.startsWith('blob:')) previewCodeUsesEditorBlobs = true;
+  return url;
 }
 
 // Helper to get the current code to be rendered in the preview
 function getCurrentPreviewCode() {
+  previewCodeUsesEditorBlobs = false;
   if (!editor) return '';
   const rawContent = editorMode === 'unified'
     ? getCurrentEditorDocumentText()
@@ -3305,7 +4106,7 @@ function getCurrentPreviewCode() {
       const fileLookup = createProjectFileLookup();
       const resolver = (canonicalPath) => {
         const referencedFile = findFileByCanonicalPath(canonicalPath, fileLookup);
-        return ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup);
+        return trackEditorBlobUrl(ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup));
       };
 
       // Resolve paths inside the editor HTML using entryFile name as context
@@ -3327,7 +4128,7 @@ function getCurrentPreviewCode() {
     const fileLookup = createProjectFileLookup();
     const resolver = (canonicalPath) => {
       const referencedFile = findFileByCanonicalPath(canonicalPath, fileLookup);
-      return ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup);
+      return trackEditorBlobUrl(ensureVirtualBlobUrl(referencedFile, new Set([entryFile.name]), fileLookup));
     };
 
     // Resolve paths inside the entry HTML
@@ -3446,12 +4247,11 @@ function handlePreviewFrameLoad() {
     setPreviewAwayFromHome(true);
   }
 
-  bindPreviewNavigationObserver();
   restoreEditorFocusAfterPreviewLoad();
 }
 
 function ensureProjectPreviewNavigationScope(currentUrl) {
-  if (editorMode !== 'split' || previewLifecycle.mode !== 'project') return false;
+  if (!currentUrl || editorMode !== 'split' || previewLifecycle.mode !== 'project') return false;
   let current;
   try {
     current = new URL(currentUrl, location.href);
@@ -3462,7 +4262,7 @@ function ensureProjectPreviewNavigationScope(currentUrl) {
 
   const navigationUrl = getCompatiblePreviewNavigationUrl(current.href);
   if (!navigationUrl || previewUrlsMatch(navigationUrl, current.href)) return false;
-  const path = normalizeProjectPath(current.pathname);
+  const path = getProjectPathFromSitePathname(current.pathname);
   previewLifecycle.expectedNavigation = {
     mode: 'project',
     url: navigationUrl,
@@ -3479,8 +4279,10 @@ function ensureProjectPreviewNavigationScope(currentUrl) {
 function initPreviewLifecycle() {
   if (!previewIframe || previewLifecycle.initialized) return;
   previewLifecycle.initialized = true;
-  window.addEventListener('message', handlePreviewRuntimeReady);
+  window.addEventListener('message', handlePreviewControlMessage);
   previewIframe.addEventListener('load', handlePreviewFrameLoad);
+  prunePreviewStorageNamespaces();
+  setPreviewFrameIsolation(false);
 
   const initialToken = 'initial';
   const initialPreviewCode = applyNonDraggableImageGuard(
@@ -3506,7 +4308,7 @@ function navigatePreviewFromUserAction(urlValue, { reason = 'navigation' } = {})
 
   const isProjectDestination = editorMode === 'split' && destination.origin === location.origin;
   if (isProjectDestination) {
-    const targetPath = getProjectPreviewPathFromUrl(destination.href) || normalizeProjectPath(destination.pathname);
+    const targetPath = getProjectPreviewPathFromUrl(destination.href) || getProjectPathFromSitePathname(destination.pathname);
     setProjectPreviewLocation(destination.href, targetPath);
     setPreviewAwayFromHome(true);
     schedulePreviewUpdate({
@@ -3530,91 +4332,6 @@ function navigatePreviewFromUserAction(urlValue, { reason = 'navigation' } = {})
   return true;
 }
 
-function bindPreviewNavigationObserver() {
-  try {
-    const previewDocument = previewIframe?.contentDocument;
-    const previewWindow = previewIframe?.contentWindow;
-    if (!previewDocument || !previewWindow || previewNavigationObservedDocuments.has(previewDocument)) return;
-    previewNavigationObservedDocuments.add(previewDocument);
-
-    previewWindow.addEventListener('pointerdown', () => {
-      previewLastUserInteractionAt = performance.now();
-      previewShouldRestoreEditorFocus = false;
-    }, true);
-
-    // Window is the final bubbling target. Page-level delegated handlers have
-    // already had an opportunity to prevent the default navigation here.
-    previewWindow.addEventListener('click', (event) => {
-      if (editorMode !== 'split') return;
-      const link = event.composedPath?.().find(node => node?.matches?.('a[href]')) || event.target?.closest?.('a[href]');
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey ||
-        !link ||
-        (link.target && link.target !== '_self') ||
-        link.hasAttribute('download')
-      ) return;
-      const href = (link.getAttribute('href') || '').trim();
-      if (!href || href.startsWith('#') || href.toLowerCase().startsWith('javascript:')) return;
-
-      // Plain iframe navigations use replace so they do not grow the joint
-      // session history of the main application. The observer is attached on
-      // load, after page scripts have registered their own click handlers.
-      event.preventDefault();
-      navigatePreviewFromUserAction(link.href, { reason: 'link' });
-    });
-
-    previewWindow.addEventListener('submit', (event) => {
-      // Simple previews keep native browser navigation and form behavior.
-      // Files mode needs this bridge only to map same-origin routes into the
-      // virtual project service-worker namespace.
-      if (editorMode !== 'split') return;
-      const form = event.target;
-      if (
-        event.defaultPrevented ||
-        !(form instanceof previewWindow.HTMLFormElement) ||
-        (form.target && form.target !== '_self')
-      ) return;
-
-      const submitter = event.submitter;
-      const method = String(submitter?.formMethod || form.method || 'get').toLowerCase();
-      const target = submitter?.formTarget || form.target || '_self';
-      if (target && target !== '_self') return;
-      if (method !== 'get') {
-        invalidatePreviewLifecycle('form-navigation', { preserveLocation: true });
-        setPreviewAwayFromHome(true);
-        return;
-      }
-
-      // `HTMLButtonElement.formAction` is surprisingly sensitive to a
-      // document `<base>` and can fall back to the current page even when
-      // the form has its own action. Read the authored attribute first so
-      // `<button formaction>` and ordinary form actions stay distinct.
-      const authoredSubmitterAction = submitter?.getAttribute?.('formaction');
-      const authoredFormAction = form.getAttribute('action') || form.action || previewWindow.location.href;
-      const originalUrl = new URL(
-        authoredSubmitterAction || authoredFormAction,
-        previewWindow.location.href
-      );
-      const navigationUrl = getCompatiblePreviewNavigationUrl(originalUrl.href);
-      event.preventDefault();
-      const destination = new URL(navigationUrl);
-      const formData = new previewWindow.FormData(form, event.submitter || undefined);
-      for (const [name, value] of formData) {
-        if (typeof value === 'string') destination.searchParams.append(name, value);
-      }
-      navigatePreviewFromUserAction(destination.href, { reason: 'form-get' });
-    });
-  } catch {
-    // Cross-origin destinations cannot be inspected after navigation; the load
-    // state fallback still keeps the home action available.
-  }
-}
-
 function getCompatiblePreviewNavigationUrl(urlValue) {
   let destination;
   try {
@@ -3624,14 +4341,8 @@ function getCompatiblePreviewNavigationUrl(urlValue) {
   }
   if (editorMode !== 'split' || destination.origin !== location.origin) return destination.href;
   if (getProjectPreviewPathFromUrl(destination.href)) return destination.href;
-
-  const virtualUrl = new URL(
-    getProjectPreviewUrl(normalizeProjectPath(destination.pathname), projectPreviewVersion)
-  );
-  virtualUrl.search = destination.search;
-  virtualUrl.hash = destination.hash;
-  virtualUrl.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(projectPreviewVersion));
-  return virtualUrl.href;
+  // A published-style URL such as `/servicios/x` is relative to the site root.
+  return getProjectPreviewUrlForSiteUrl(destination.href, projectPreviewVersion);
 }
 
 function returnPreviewToHome() {
@@ -3675,30 +4386,39 @@ function setPreviewStatus(label, state = 'idle') {
 function getEmptyPreviewColors() {
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
   return isDark
-    ? { background: '#1e1e24', text: '#9ca3af' }
-    : { background: '#ffffff', text: '#64748b' };
+    ? { background: '#0b0d13', text: '#94a3b8', title: '#e2e8f0', accent: '#8842FD', ring: 'rgba(136,66,253,.14)' }
+    : { background: '#ffffff', text: '#64748b', title: '#0f172a', accent: '#7334ec', ring: 'rgba(136,66,253,.10)' };
 }
 
+// An empty message renders the default "start here" hint; a specific
+// message (e.g. an empty project) is shown on its own.
 function createEmptyProjectPreviewCode(message = EMPTY_PROJECT_PREVIEW_MESSAGE) {
-  const { background, text } = getEmptyPreviewColors();
-  const safeMessage = String(message || '').replace(/[&<>"']/g, (char) => ({
+  const { background, text, title, accent, ring } = getEmptyPreviewColors();
+  const escape = value => String(value || '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;'
   }[char]));
+  const content = message
+    ? `<p class="hint">${escape(message)}</p>`
+    : `<div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg></div><p class="title">${escape(t('preview_empty_title'))}</p><p class="hint">${escape(t('preview_empty_hint'))}</p>`;
 
   return `<!doctype html>
 <html data-html-viewer-empty-preview>
 <head>
 <meta charset="utf-8">
 <style>
-html,body{min-height:100%;margin:0;background:${background};color:${text};}
-body{display:grid;place-items:center;font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+html,body{min-height:100%;height:100%;margin:0;background:${background};color:${text};}
+body{display:grid;place-items:center;font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;user-select:none;}
+main{max-width:320px;padding:24px;text-align:center;}
+.mark{display:inline-grid;place-items:center;width:44px;height:44px;margin-bottom:14px;border-radius:12px;background:${ring};color:${accent};}
+.title{margin:0 0 6px;color:${title};font-size:15px;font-weight:600;}
+.hint{margin:0;}
 </style>
 </head>
-<body>${safeMessage ? `<div>${safeMessage}</div>` : ''}</body>
+<body><main>${content}</main></body>
 </html>`;
 }
 
@@ -3721,6 +4441,10 @@ function restoreEditorFocusAfterPreviewLoad() {
   const restore = () => {
     if (!editor) return;
     if (previewLastUserInteractionAt >= scheduledAt) return;
+    // Only recover focus the preview load took away; never pull it back from
+    // a control the user moved to meanwhile (explorer, toolbar, dialogs...).
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== previewIframe && !editorHasKeyboardFocus()) return;
     if (monacoLoaded && typeof editor.focus === 'function') {
       editor.focus();
     } else if (fallbackTextarea) {
@@ -3935,6 +4659,7 @@ function renderSrcdocPreviewNow(rawCode, request) {
     reason: request.reason
   };
   window.clearPreviewDiagnostics?.();
+  setPreviewFrameIsolation(!isEmpty && previewCodeUsesEditorBlobs);
   previewIframe.removeAttribute('src');
   previewIframe.srcdoc = code;
 }
@@ -3997,10 +4722,12 @@ function getProjectPreviewTargetUrl(request, targetPath) {
   return url.href;
 }
 
-function navigatePreviewFrameToUrl(url) {
+function navigatePreviewFrameToUrl(url, { push = false } = {}) {
+  setPreviewFrameIsolation(true);
   previewIframe.removeAttribute('srcdoc');
   try {
-    previewIframe.contentWindow.location.replace(url);
+    if (push) previewIframe.contentWindow.location.assign(url);
+    else previewIframe.contentWindow.location.replace(url);
   } catch {
     previewIframe.src = url;
   }
@@ -4081,7 +4808,9 @@ async function renderProjectPreviewNow(request) {
     reason: request.reason
   };
   window.clearPreviewDiagnostics?.();
-  navigatePreviewFrameToUrl(targetUrl);
+  // Following a link adds a history entry, so `history.back()` in the page
+  // returns to the previous page; edits and recoveries replace the document.
+  navigatePreviewFrameToUrl(targetUrl, { push: request.reason === 'link' });
 }
 
 function renderPreviewNow(request = null) {
@@ -4139,21 +4868,26 @@ function syncEditorZoomGutter() {
   if (!monacoLoaded || !editor || typeof editor.getLayoutInfo !== 'function') return;
 
   const isMobile = window.innerWidth <= 768;
+  // Apply the gutter options first: measuring before they change (e.g. when
+  // the window crosses the mobile breakpoint) leaves the code column narrower
+  // than the centered line numbers, which then overlap the code.
+  editor.updateOptions({
+    lineNumbersMinChars: isMobile ? 2 : 3,
+    folding: !isMobile
+  });
+
   const layoutInfo = editor.getLayoutInfo();
   const options = editor.getRawOptions?.();
   const currentDecorationsWidth = Number(options?.lineDecorationsWidth) || 0;
   const fixedGutterWidth = layoutInfo.contentLeft - currentDecorationsWidth;
   const nextDecorationsWidth = Math.max(0, Math.round(EDITOR_CONTENT_LEFT - fixedGutterWidth));
 
-  editor.updateOptions({
-    lineNumbersMinChars: isMobile ? 2 : 3,
-    folding: !isMobile
-  });
-
   if (nextDecorationsWidth !== currentDecorationsWidth) {
     editor.updateOptions({ lineDecorationsWidth: nextDecorationsWidth });
   }
 }
+
+let showEditorZoomIndicator = () => {};
 
 function initEditorWheelZoom() {
   const editorContainer = document.getElementById('editor-container');
@@ -4176,6 +4910,7 @@ function initEditorWheelZoom() {
     }, 900);
   };
 
+  showEditorZoomIndicator = showZoomIndicator;
   syncEditorTypographyVariables();
   editorContainer.addEventListener('wheel', (event) => {
     if (!event.ctrlKey || event.deltaY === 0) return;
@@ -4761,6 +5496,34 @@ function triggerFocusMode() {
   if (btn) btn.click();
 }
 
+// Ctrl/Cmd with +, - or 0 zooms the code editor while it has focus, matching
+// the shortcuts listed in Help. Elsewhere the browser keeps its page zoom.
+function handleEditorZoomShortcut(event) {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey || !editorHasKeyboardFocus()) return false;
+  let nextSize = null;
+  if (event.key === '+' || event.key === '=' || event.code === 'NumpadAdd') nextSize = editorFontSize + 1;
+  else if (event.key === '-' || event.key === '_' || event.code === 'NumpadSubtract') nextSize = editorFontSize - 1;
+  else if (event.key === '0' || event.code === 'Numpad0') nextSize = EDITOR_DEFAULT_FONT_SIZE;
+  if (nextSize === null) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  setEditorFontSize(nextSize);
+  showEditorZoomIndicator();
+  return true;
+}
+
+// Inputs such as file names keep their native undo; the app history only
+// owns the code editor and the rest of the interface.
+function isNativeTextEditingTarget(target) {
+  if (!(target instanceof Element) || target === fallbackTextarea) return false;
+  // Monaco's own text surface is the "inputarea"; its find/rename widgets
+  // are ordinary inputs with their own undo.
+  if (target.closest('.monaco-editor') && target.classList.contains('inputarea')) return false;
+  return Boolean(target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]'));
+}
+
+window.addEventListener('keydown', handleEditorZoomShortcut, true);
+
 // Global keyboard shortcuts
 window.addEventListener('keydown', (e) => {
   const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -4795,7 +5558,7 @@ window.addEventListener('keydown', (e) => {
 // Interceptar Deshacer (Ctrl+Z) y Rehacer (Ctrl+Y / Ctrl+Shift+Z) en fase de captura para anular Monaco
 window.addEventListener('keydown', (e) => {
   const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-  if (isCtrlOrCmd) {
+  if (isCtrlOrCmd && !e.altKey && !isNativeTextEditingTarget(e.target)) {
     const key = e.key.toLowerCase();
     if (key === 'z') {
       if (e.shiftKey) {
@@ -4960,6 +5723,7 @@ function initResizer() {
     const workspaceWidth = workspace?.getBoundingClientRect().width || 0;
     const initialPercent = clampSplitPercent(Number.isFinite(savedPercent) ? savedPercent : 55, workspaceWidth);
     workspace.style.setProperty('--split-percent', `${initialPercent}%`);
+    syncHandleValue();
   });
 
   // Layout offsets to align handle center with cursor
@@ -4985,6 +5749,39 @@ function initResizer() {
     const y = Math.max(minY, Math.min(maxY, clientY - dragHandleTop));
     handle.style.setProperty('--mouse-y', `${y}px`);
   }
+
+  // Keyboard resizing keeps the split usable without a pointer.
+  handle.setAttribute('role', 'separator');
+  handle.setAttribute('aria-orientation', 'vertical');
+  handle.setAttribute('aria-controls', 'editor-panel');
+  handle.setAttribute('aria-label', t('resize_panels'));
+  handle.tabIndex = 0;
+  const syncHandleValue = () => {
+    const percent = Number.parseFloat(workspace.style.getPropertyValue('--split-percent')) || savedPercent || 55;
+    handle.setAttribute('aria-valuenow', String(Math.round(percent)));
+  };
+  handle.setAttribute('aria-valuemin', String(MIN_SPLIT_PERCENT));
+  handle.setAttribute('aria-valuemax', String(MAX_SPLIT_PERCENT));
+  handle.addEventListener('keydown', (event) => {
+    const keys = { ArrowLeft: -2, ArrowRight: 2, Home: -100, End: 100 };
+    if (!(event.key in keys)) return;
+    event.preventDefault();
+    const workspaceWidth = workspace.getBoundingClientRect().width || 0;
+    const current = Number.parseFloat(workspace.style.getPropertyValue('--split-percent')) || 55;
+    const step = event.shiftKey ? keys[event.key] * 5 : keys[event.key];
+    const next = clampSplitPercent(current + step, workspaceWidth);
+    workspace.style.setProperty('--split-percent', `${next}%`);
+    writeStoredValue('split-percent', next);
+    syncHandleValue();
+    queueEditorLayout();
+  });
+  handle.addEventListener('dblclick', () => {
+    const next = clampSplitPercent(55);
+    workspace.style.setProperty('--split-percent', `${next}%`);
+    writeStoredValue('split-percent', next);
+    syncHandleValue();
+    queueEditorLayout();
+  });
 
   // Update position on hover/movement over handle
   handle.addEventListener('mousemove', updateMouseY);
@@ -5049,6 +5846,7 @@ function initResizer() {
     const editorRect = editorPanel.getBoundingClientRect();
     const currentPercent = clampSplitPercent((editorRect.width / workspaceRect.width) * 100, workspaceRect.width);
     writeStoredValue('split-percent', currentPercent);
+    syncHandleValue();
 
     document.removeEventListener('mousemove', drag);
     document.removeEventListener('touchmove', drag);
@@ -5147,9 +5945,14 @@ const previewHomeBtn = document.getElementById('btn-preview-home');
 const previewReloadBtn = document.getElementById('btn-preview-reload');
 
 controlButtons.forEach(btn => {
+  btn.setAttribute('aria-pressed', String(btn.classList.contains('active')));
   btn.addEventListener('click', () => {
-    controlButtons.forEach(b => b.classList.remove('active'));
+    controlButtons.forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
     btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
 
     const size = btn.getAttribute('data-size');
     iframeWrapper.className = 'iframe-wrapper'; // Reset
@@ -5186,39 +5989,79 @@ if (previewReloadBtn) {
 // Sidebar Navigation / Actions
 
 // 1. Preview (Full Page)
+// The full page opens the preview host, which runs the page with the same
+// sandbox as the editor's preview and without a reference to the editor.
+function getFullPagePreviewRoute() {
+  try {
+    const current = new URL(previewIframe.contentWindow.location.href);
+    if (
+      previewLifecycle.mode === 'project' &&
+      current.origin === location.origin &&
+      !getProjectPreviewPathFromUrl(current.href) &&
+      readPreviewRuntimeInfo(previewIframe.contentWindow)?.prettyPathname
+    ) {
+      return `${current.pathname}${current.search}${current.hash}`;
+    }
+  } catch {}
+  return getProjectPreviewSiteRoute(previewLifecycle.mode === 'project' && previewLifecycle.projectPath
+    ? previewLifecycle.projectPath
+    : getEntryFile()?.name || '');
+}
+
+// Simple documents are self-contained for the full page: project files are
+// embedded as Data URLs, so the page can run in an opaque origin.
+async function createFullPagePreviewDocument() {
+  const entryFile = getEntryFile();
+  if (!entryFile) return applyNonDraggableImageGuard(createEmptyProjectPreviewCode(), { renderToken: 'full-page' });
+  let html = getCurrentPreviewCode();
+  if (previewCodeUsesEditorBlobs) {
+    const raw = editorMode === 'unified' ? getCurrentEditorDocumentText() : getFileText(entryFile);
+    html = resolveVirtualPaths(raw, await createVirtualFileDataUrlSnapshot(), entryFile.name);
+  }
+  if (isEmptyPreviewCode(html)) html = createEmptyProjectPreviewCode('');
+  return applyNonDraggableImageGuard(html, { renderToken: 'full-page' });
+}
+
+function sendDocumentToFullPage(previewWindow, hostUrl, html) {
+  const title = /<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1]?.trim() || filenameInput?.value || 'HTML Viewer';
+  const targetOrigin = location.origin === 'null' ? '*' : location.origin;
+  const onMessage = event => {
+    if (event.source !== previewWindow || event.data?.type !== 'html-viewer:full-page-ready') return;
+    window.removeEventListener('message', onMessage);
+    previewWindow.postMessage({ type: 'html-viewer:full-page-document', html, title }, targetOrigin);
+  };
+  window.addEventListener('message', onMessage);
+  setTimeout(() => window.removeEventListener('message', onMessage), 60000);
+  hostUrl.searchParams.set('document', '1');
+  previewWindow.location.replace(hostUrl.href);
+}
+
 document.getElementById('btn-preview-full').addEventListener('click', async () => {
   if (!editor) return;
+  // Opened synchronously so the browser ties the window to this click.
+  const previewWindow = window.open('', '_blank');
+  if (!previewWindow) {
+    showToast(t('toast_popup_blocked'), 'error');
+    return;
+  }
+
   try {
-    const previewWindow = window.open('', '_blank');
-    if (!previewWindow) {
-      showToast(t('toast_popup_blocked'), 'error');
-      return;
-    }
-
-    const entryFile = getEntryFile();
-    if (!entryFile) {
-      previewWindow.document.open();
-      previewWindow.document.write(createEmptyProjectPreviewCode());
-      previewWindow.document.close();
-      return;
-    }
-
-    const hasProjectPreview = await syncProjectPreviewSnapshot({ full: true });
-    if (hasProjectPreview) {
-      previewWindow.location.href = getProjectPreviewUrl(entryFile.name, projectPreviewVersion);
+    const hostUrl = new URL(PREVIEW_HOST_PAGE, APP_ROOT_URL);
+    hostUrl.searchParams.set('lang', currentLocale);
+    if (editorMode === 'split' && getEntryFile() && await syncProjectPreviewSnapshot({ full: true })) {
+      hostUrl.searchParams.set('session', projectPreviewSessionId);
+      const siteRoot = getProjectPreviewSiteRootPath();
+      if (siteRoot) hostUrl.searchParams.set('root', siteRoot);
+      hostUrl.hash = getFullPagePreviewRoute();
+      previewWindow.location.replace(hostUrl.href);
       showToast(t('toast_project_opened_virtual'));
       return;
     }
 
-    const { code, urlsToRevoke } = createFullPagePreviewSnapshot();
-    previewWindow.document.open();
-    previewWindow.document.write(code);
-    previewWindow.document.close();
-    setTimeout(() => {
-      urlsToRevoke.forEach(url => URL.revokeObjectURL(url));
-    }, 10 * 60 * 1000);
+    sendDocumentToFullPage(previewWindow, hostUrl, await createFullPagePreviewDocument());
     showToast(t('toast_full_page_opened'));
-  } catch (err) {
+  } catch {
+    previewWindow.close();
     showToast(t('toast_page_open_error'), 'error');
   }
 });
@@ -5249,14 +6092,14 @@ document.getElementById('btn-highlight-full').addEventListener('click', () => {
 document.getElementById('btn-sample').addEventListener('click', () => {
   if (!editor) return;
   setEditorValue(DEFAULT_SAMPLE_CODE);
-  showToast(t('toast_sample_loaded'));
+  showUndoableToast(t('toast_sample_loaded'));
 });
 
 // 4. Clear
 document.getElementById('btn-clear').addEventListener('click', () => {
   if (!editor) return;
   setEditorValue('');
-  showToast(t('toast_editor_cleared'));
+  showUndoableToast(t('toast_editor_cleared'));
 });
 
 // 5. Import from File / ZIP / Drag-and-Drop Folder
@@ -5308,6 +6151,16 @@ if (assetInput) {
   });
 }
 
+// Name used for exported HTML. Simple mode uses the editable title; Files
+// mode hides that input, so its entry document names the download instead.
+function getExportBaseName() {
+  const rawName = editorMode === 'unified'
+    ? (filenameInput?.value || '')
+    : getBaseName(getEntryFile()?.name || '');
+  const name = rawName.trim().replace(/\.html?$/i, '').replace(/[\\/:*?"<>|]/g, '_');
+  return name || 'index';
+}
+
 // 6. Export to File / Project Folder / ZIP
 document.getElementById('btn-export').addEventListener('click', () => {
   if (!editor) return;
@@ -5317,24 +6170,8 @@ document.getElementById('btn-export').addEventListener('click', () => {
       // URLs.  Preview rewriting is a renderer concern.
       const code = getCurrentEditorDocumentText();
       const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
-      const link = document.createElement('a');
-
-      // Get custom filename
-      let filename = filenameInput ? filenameInput.value.trim() : 'index';
-      if (!filename) filename = 'index';
-      if (filename.toLowerCase().endsWith('.html')) {
-        filename = filename.substring(0, filename.length - 5);
-      }
-      const fullName = `${filename}.html`;
-
-      const downloadUrl = URL.createObjectURL(blob);
-      link.href = downloadUrl;
-      link.download = fullName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+      const fullName = `${getExportBaseName()}.html`;
+      downloadBlob(blob, fullName);
       showToast(t('toast_file_exported_as', { name: fullName }));
     } catch (err) {
       showToast(t('toast_export_error'), 'error');
@@ -5346,7 +6183,7 @@ document.getElementById('btn-export').addEventListener('click', () => {
 
 // Resizing and panel alignment updates on window resize
 window.addEventListener('resize', () => {
-  if (editorMode === 'split' && workspace) {
+  if (workspace) {
     const workspaceWidth = workspace.getBoundingClientRect().width || 0;
     const currentPercent = Number.parseFloat(workspace.style.getPropertyValue('--split-percent')) || 55;
     const clamped = clampSplitPercent(currentPercent, workspaceWidth);
@@ -5372,9 +6209,19 @@ window.addEventListener('resize', () => {
 
 /* ---- src/app/09-import-export-theme.js ---- */
 // --- Modal & Project Import/Export Helpers ---
+let modalReturnFocus = null;
+
+function getModalFocusableElements(modal) {
+  return Array.from(modal.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])'))
+    .filter(element => !element.disabled && element.offsetParent !== null);
+}
+
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
+  modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
   modal.style.display = 'flex';
   modal.offsetHeight; // Force reflow
   modal.classList.add('active');
@@ -5398,12 +6245,22 @@ function openModal(modalId) {
       }
     }
   }
+
+  const [firstFocusable] = getModalFocusableElements(modal.querySelector('.modal-body') || modal);
+  (firstFocusable || modal.querySelector('.modal-close-btn'))?.focus({ preventScroll: true });
 }
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (!modal) return;
+  if (!modal || !modal.classList.contains('active')) return;
   modal.classList.remove('active');
+  const returnFocus = modalReturnFocus;
+  modalReturnFocus = null;
+  if (returnFocus?.isConnected && !returnFocus.closest('[inert]')) {
+    returnFocus.focus({ preventScroll: true });
+  } else if (monacoLoaded && editor) {
+    editor.focus();
+  }
   setTimeout(() => {
     if (!modal.classList.contains('active')) {
       modal.style.display = 'none';
@@ -5427,6 +6284,28 @@ function initModalCloseEvents() {
       closeModal('modal-export');
     });
   }
+
+  modal.addEventListener('keydown', (event) => {
+    if (!modal.classList.contains('active')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeModal('modal-export');
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = getModalFocusableElements(modal);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 }
 
 function startImportOperation() {
@@ -5661,7 +6540,7 @@ async function exportToZip() {
   try {
     JSZipCtor = await ensureJSZip();
   } catch (err) {
-    if (token === importGeneration) showToast(t('toast_jszip_not_loaded'), 'error');
+    showToast(t('toast_jszip_not_loaded'), 'error');
     return;
   }
 
@@ -5681,16 +6560,7 @@ async function exportToZip() {
 
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     const fullName = `${folderName}.zip`;
-
-    const downloadUrl = URL.createObjectURL(content);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = fullName;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+    downloadBlob(content, fullName);
     showToast(t('toast_project_exported_zip', { name: fullName }));
     closeModal('modal-export');
   }).catch(function (err) {
@@ -5750,7 +6620,7 @@ async function exportToFolder() {
 async function importSingleHtmlFile(file, operationToken = null) {
   const token = operationToken ?? startImportOperation();
   try {
-    const html = await file.text();
+    const html = await readTextFile(file);
     if (token !== importGeneration || !editor) return false;
 
     if (!beginProjectReplacement(token)) return false;
@@ -5814,7 +6684,9 @@ async function importFromZip(zipFile, operationToken = null) {
 
       const fileId = createFileId('file');
       const order = nextFileOrder + fileCounter++;
-      const content = await (isTextFilename(relativePath) ? zipEntry.async('string') : zipEntry.async('blob'));
+      const content = isTextFilename(relativePath)
+        ? decodeTextFileBytes(await zipEntry.async('uint8array'), relativePath)
+        : await zipEntry.async('blob');
       newFiles.push(isTextFilename(relativePath)
         ? createTextFileRecord(relativePath, content, { id: fileId, order })
         : createBinaryFileRecord(relativePath, content, { id: fileId, order, mimeType: getMimeTypeForFilename(relativePath) }));
@@ -6270,24 +7142,9 @@ function initImportExportOptions() {
       try {
         const code = await compileToUnifiedHTML();
         const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
-        const link = document.createElement('a');
-
-        let filename = filenameInput ? filenameInput.value.trim() : 'index';
-        if (!filename) filename = 'index';
-        if (filename.toLowerCase().endsWith('.html')) {
-          filename = filename.substring(0, filename.length - 5);
-        }
         const suffix = currentLocale === 'es' ? '_unificado.html' : '_unified.html';
-        const fullName = `${filename}${suffix}`;
-
-        const downloadUrl = URL.createObjectURL(blob);
-        link.href = downloadUrl;
-        link.download = fullName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+        const fullName = `${getExportBaseName()}${suffix}`;
+        downloadBlob(blob, fullName);
         showToast(t('toast_unified_html_exported', { name: fullName }));
         closeModal('modal-export');
       } catch (err) {
@@ -6513,9 +7370,9 @@ function createImageZoomViewer(file) {
   const controls = document.createElement('div');
   controls.className = 'asset-zoom-controls';
   controls.innerHTML = `
-    <button type="button" class="asset-zoom-btn" data-zoom-action="out" title="Alejar"><i data-lucide="minus"></i></button>
-    <button type="button" class="asset-zoom-btn asset-zoom-value" data-zoom-action="reset" title="Restablecer">100%</button>
-    <button type="button" class="asset-zoom-btn" data-zoom-action="in" title="Acercar"><i data-lucide="plus"></i></button>
+    <button type="button" class="asset-zoom-btn" data-zoom-action="out" title="${escapeHtml(t('zoom_out'))}" aria-label="${escapeHtml(t('zoom_out'))}"><i data-lucide="minus"></i></button>
+    <button type="button" class="asset-zoom-btn asset-zoom-value" data-zoom-action="reset" title="${escapeHtml(t('zoom_reset'))}" aria-label="${escapeHtml(t('zoom_reset'))}">100%</button>
+    <button type="button" class="asset-zoom-btn" data-zoom-action="in" title="${escapeHtml(t('zoom_in'))}" aria-label="${escapeHtml(t('zoom_in'))}"><i data-lucide="plus"></i></button>
   `;
 
   viewport.append(image, controls);
@@ -6742,6 +7599,13 @@ async function copyToClipboard(text, successMessage) {
   }
 }
 
+// Paths are copied relative to the entry HTML so they resolve when pasted
+// there (the stored path also contains the project's root folder).
+function getAssetReferencePath(file) {
+  const entryFile = getEntryFile();
+  return entryFile && entryFile.id !== file.id ? makeRelativePath(entryFile.name, file.name) : getBaseName(file.name);
+}
+
 function initAssetPreviewActions() {
   const copyPathBtn = document.getElementById('btn-copy-asset-path');
   const copyImgBtn = document.getElementById('btn-copy-asset-img');
@@ -6750,7 +7614,7 @@ function initAssetPreviewActions() {
   if (copyPathBtn) {
     copyPathBtn.addEventListener('click', () => {
       const file = files.find(f => f.id === activeFileId);
-      if (file && !file.isFolder) copyToClipboard(file.name, t('toast_path_copied'));
+      if (file && !file.isFolder) copyToClipboard(getAssetReferencePath(file), t('toast_path_copied'));
     });
   }
 
@@ -6758,7 +7622,7 @@ function initAssetPreviewActions() {
     copyImgBtn.addEventListener('click', () => {
       const file = files.find(f => f.id === activeFileId);
       if (file && IMAGE_EXTENSIONS.has(getFileExtension(file.name))) {
-        copyToClipboard(`<img src="${file.name}" alt="">`, t('toast_img_tag_copied'));
+        copyToClipboard(`<img src="${escapeHtml(getAssetReferencePath(file))}" alt="">`, t('toast_img_tag_copied'));
       }
     });
   }
@@ -6766,7 +7630,7 @@ function initAssetPreviewActions() {
   if (copyCssBtn) {
     copyCssBtn.addEventListener('click', () => {
       const file = files.find(f => f.id === activeFileId);
-      if (file && !file.isFolder) copyToClipboard(`url("${file.name}")`, t('toast_css_url_copied'));
+      if (file && !file.isFolder) copyToClipboard(`url("${getAssetReferencePath(file).replace(/"/g, '\\"')}")`, t('toast_css_url_copied'));
     });
   }
 }
@@ -7080,12 +7944,11 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
 
   const rootFolder = getProjectRootFolder();
   if (!targetFolder.startsWith(rootFolder)) {
-    showToast('No se pueden mover elementos fuera de la carpeta madre', 'error');
+    showToast(t('toast_move_outside_root_error'), 'error');
     return false;
   }
 
   let pathChanges = [];
-  saveHistoryState();
 
   if (source.kind === 'file') {
     const file = files.find(item => item.id === source.id);
@@ -7094,9 +7957,10 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
     const newPath = joinProjectPath(targetFolder, getBaseName(file.name));
     if (oldPath === newPath) return true;
     if (files.some(item => item.id !== file.id && item.name.toLowerCase() === newPath.toLowerCase())) {
-      showToast('Ya existe un archivo con ese nombre en esa carpeta', 'error');
+      showToast(t('toast_file_exists_in_folder'), 'error');
       return false;
     }
+    saveHistoryState();
 
     file.name = newPath;
     file.type = getFileExtension(newPath) || file.type;
@@ -7111,16 +7975,17 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
     const oldPath = normalizeProjectPath(source.path, { folder: true });
     if (!oldPath) return false;
     if (targetFolder.startsWith(oldPath)) {
-      showToast('No se puede mover una carpeta dentro de sí misma', 'error');
+      showToast(t('toast_move_inside_self_error'), 'error');
       return false;
     }
 
     const newPath = joinProjectPath(targetFolder, getBaseName(oldPath), { folder: true });
     if (oldPath === newPath) return true;
     if (files.some(item => item.id !== source.id && item.name.toLowerCase() === newPath.toLowerCase())) {
-      showToast('Ya existe una carpeta con ese nombre en esa ubicación', 'error');
+      showToast(t('toast_folder_exists_in_location'), 'error');
       return false;
     }
+    saveHistoryState();
 
     const movingFiles = files.filter(file => file.name.startsWith(oldPath));
     movingFiles.forEach(file => {
@@ -7147,7 +8012,7 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
   updatePreview();
   window.scheduleRecoverySave?.();
   if (updatedRefs > 0) {
-    showToast(`${updatedRefs} archivo(s) actualizados con rutas nuevas`, 'info');
+    showToast(t('toast_files_updated_paths', { count: updatedRefs }), 'info');
   }
   return true;
 }
@@ -7156,6 +8021,10 @@ function reorderVfsItemAround(source, targetPath, position) {
   const target = getFileByPath(targetPath);
   if (!target) return false;
   const targetParent = getParentPath(target.name);
+  const sourceParent = getParentPath(normalizeProjectPath(source.path || '', { folder: source.kind === 'folder' }));
+  // A move records its own history step; a reorder inside the same folder
+  // only changes ordering, so record it here.
+  if (sourceParent === normalizeProjectPath(targetParent, { folder: true })) saveHistoryState();
   if (!moveVfsItemToFolder(source, targetParent)) return false;
 
   const sourceRecord = source.kind === 'file'
@@ -7351,7 +8220,18 @@ function renderFileExplorer() {
   updateEntryHtmlSelector();
 
   const savedScrollTop = fileListContainer.scrollTop;
+  // Re-rendering replaces every row; keep keyboard focus on the same item.
+  const focusedRow = document.activeElement?.closest?.('.file-item, .folder-item');
+  const focusedKey = focusedRow && fileListContainer.contains(focusedRow)
+    ? (focusedRow.dataset.fileId ? `file:${focusedRow.dataset.fileId}` : `folder:${focusedRow.dataset.folderPath}`)
+    : '';
   fileListContainer.innerHTML = '';
+  fileListContainer.setAttribute('role', 'tree');
+  fileListContainer.setAttribute('aria-label', t('explorer_title'));
+  if (!fileListContainer.dataset.keyboardReady) {
+    fileListContainer.dataset.keyboardReady = 'true';
+    fileListContainer.addEventListener('keydown', handleExplorerKeydown);
+  }
   activeExplorerDropElement = null;
   fileListContainer.classList.remove('drop-inside');
 
@@ -7399,7 +8279,76 @@ function renderFileExplorer() {
   fileListContainer.appendChild(fragment);
   scheduleLucideIcons();
 
+  // Exactly one row is reachable with Tab; arrows move between rows and
+  // F2/Delete reach the row actions without a tab stop per button.
+  fileListContainer.querySelectorAll('button').forEach(button => { button.tabIndex = -1; });
+  const rows =Array.from(fileListContainer.querySelectorAll('.file-item, .folder-item'));
+  const rowToFocus = focusedKey
+    ? rows.find(row => (focusedKey.startsWith('file:') ? `file:${row.dataset.fileId}` : `folder:${row.dataset.folderPath}`) === focusedKey)
+    : null;
+  const tabStop = rowToFocus || fileListContainer.querySelector('.file-item.active') || rows[0];
+  if (tabStop) tabStop.tabIndex = 0;
+  rowToFocus?.focus({ preventScroll: true });
+
   fileListContainer.scrollTop = savedScrollTop;
+}
+
+function handleExplorerKeydown(event) {
+  const row = event.target.closest?.('.file-item, .folder-item');
+  if (!row || event.target !== row) return;
+  const rows = Array.from(event.currentTarget.querySelectorAll('.file-item, .folder-item'));
+  const index = rows.indexOf(row);
+  const focusRow = nextRow => {
+    if (!nextRow) return;
+    rows.forEach(item => { item.tabIndex = -1; });
+    nextRow.tabIndex = 0;
+    nextRow.focus();
+  };
+  const isFolder = row.classList.contains('folder-item');
+  const folderPath = row.dataset.folderPath;
+  const file = isFolder ? null : files.find(item => item.id === row.dataset.fileId);
+
+  switch (event.key) {
+    case 'ArrowDown':
+      focusRow(rows[index + 1]);
+      break;
+    case 'ArrowUp':
+      focusRow(rows[index - 1]);
+      break;
+    case 'Home':
+      focusRow(rows[0]);
+      break;
+    case 'End':
+      focusRow(rows[rows.length - 1]);
+      break;
+    case 'ArrowRight':
+    case 'ArrowLeft': {
+      if (!isFolder) return;
+      const collapse = event.key === 'ArrowLeft';
+      if (collapsedFolders.has(folderPath) === collapse) return;
+      if (collapse) collapsedFolders.add(folderPath);
+      else collapsedFolders.delete(folderPath);
+      renderFileExplorer();
+      break;
+    }
+    case 'Enter':
+    case ' ':
+      if (isFolder) {
+        row.click();
+      } else if (file) {
+        openFile(file.id);
+      }
+      break;
+    case 'F2':
+      row.querySelector('.file-item-btn[data-action="rename"], .folder-item-btn[data-action="rename"]')?.click();
+      break;
+    case 'Delete':
+      row.querySelector('[data-action="delete"]')?.click();
+      break;
+    default:
+      return;
+  }
+  event.preventDefault();
 }
 
 // Recursively render tree children
@@ -7423,6 +8372,11 @@ function renderTreeChildren(parentNode, container, depth) {
       const folderDiv = document.createElement('div');
       folderDiv.className = 'folder-item';
       folderDiv.dataset.folderPath = node.path;
+      folderDiv.tabIndex = -1;
+      folderDiv.setAttribute('role', 'treeitem');
+      folderDiv.setAttribute('aria-level', String(depth + 1));
+      folderDiv.setAttribute('aria-expanded', String(!isCollapsed));
+      folderDiv.setAttribute('aria-label', node.name);
 
       const infoDiv = document.createElement('div');
       infoDiv.className = 'folder-item-info';
@@ -7470,6 +8424,7 @@ function renderTreeChildren(parentNode, container, depth) {
       const renameBtn = document.createElement('button');
       renameBtn.className = 'folder-item-btn';
       renameBtn.title = t('rename');
+      renameBtn.dataset.action = 'rename';
       renameBtn.setAttribute('aria-label', t('rename_folder'));
       renameBtn.innerHTML = '<i data-lucide="edit-2"></i>';
       renameBtn.addEventListener('click', (e) => {
@@ -7483,6 +8438,7 @@ function renderTreeChildren(parentNode, container, depth) {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'folder-item-btn';
         deleteBtn.title = t('delete');
+        deleteBtn.dataset.action = 'delete';
         deleteBtn.setAttribute('aria-label', t('delete_folder'));
         deleteBtn.innerHTML = '<i data-lucide="trash"></i>';
         deleteBtn.addEventListener('click', (e) => {
@@ -7536,7 +8492,6 @@ function renderTreeChildren(parentNode, container, depth) {
         }
 
         const targetFolder = position === 'inside' ? node.path : getParentPath(node.path);
-        const targetName = position === 'inside' ? node.name : (getParentPath(node.path).split('/').filter(Boolean).pop() || 'raíz');
 
         if (position === 'inside') collapsedFolders.delete(node.path);
         if (typeof showDragDropLoading === 'function') showDragDropLoading(currentLocale === 'es' ? 'Añadiendo archivos...' : 'Adding files...');
@@ -7596,6 +8551,11 @@ function renderTreeChildren(parentNode, container, depth) {
       const fileDiv = document.createElement('div');
       fileDiv.className = `file-item ${isActive ? 'active' : ''}`;
       fileDiv.dataset.fileId = file.id;
+      fileDiv.tabIndex = -1;
+      fileDiv.setAttribute('role', 'treeitem');
+      fileDiv.setAttribute('aria-level', String(depth + 1));
+      fileDiv.setAttribute('aria-selected', String(isActive));
+      fileDiv.setAttribute('aria-label', node.name);
 
       const infoDiv = document.createElement('div');
       infoDiv.className = 'file-item-info';
@@ -7622,6 +8582,7 @@ function renderTreeChildren(parentNode, container, depth) {
       const renameBtn = document.createElement('button');
       renameBtn.className = 'file-item-btn';
       renameBtn.title = t('rename');
+      renameBtn.dataset.action = 'rename';
       renameBtn.setAttribute('aria-label', t('rename_file'));
       renameBtn.innerHTML = '<i data-lucide="edit-2"></i>';
       renameBtn.addEventListener('click', (e) => {
@@ -7633,6 +8594,7 @@ function renderTreeChildren(parentNode, container, depth) {
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'file-item-btn';
       deleteBtn.title = t('delete');
+      deleteBtn.dataset.action = 'delete';
       deleteBtn.setAttribute('aria-label', t('delete_file'));
       deleteBtn.innerHTML = '<i data-lucide="trash"></i>';
       deleteBtn.addEventListener('click', (e) => {
@@ -7756,8 +8718,7 @@ function createNewFolder(parentPath = '') {
     folderName = parentPath + baseName + '/';
   }
 
-  const fileId = 'folder-' + String(Date.now());
-  const newFolder = createFolderRecord(folderName, { id: fileId });
+  const newFolder = createFolderRecord(folderName);
 
   files.push(newFolder);
 
@@ -7925,7 +8886,7 @@ function deleteFolder(folderPath) {
   collapsedFolders.delete(folderPath);
   cleanupVirtualBlobUrlCache();
 
-  showToast(t('toast_folder_deleted', { name: folderName }));
+  showUndoableToast(t('toast_folder_deleted', { name: folderName }));
   renderFileExplorer();
   renderActiveFileSummary();
   updateFileNameExtension();
@@ -7949,8 +8910,8 @@ function createNewFile(parentPath = '') {
     fullName = parentPath + baseName;
   }
 
-  const fileId = String(Date.now());
-  const newFile = createTextFileRecord(fullName, '', { id: fileId });
+  const newFile = createTextFileRecord(fullName, '');
+  const fileId = newFile.id;
   files.push(newFile);
 
   if (monacoLoaded) createModelForFile(newFile);
@@ -8001,7 +8962,7 @@ function deleteFile(fileId) {
   }
   cleanupVirtualBlobUrlCache();
 
-  showToast(t('toast_file_deleted', { name: deletedFileName.split('/').pop() }));
+  showUndoableToast(t('toast_file_deleted', { name: deletedFileName.split('/').pop() }));
   renderFileExplorer();
   renderActiveFileSummary();
   updateFileNameExtension();
@@ -8323,6 +9284,7 @@ function initMobileControls() {
     if (sidebar) sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('active');
     syncSidebarInteractivity();
+    mobileMenuToggle?.setAttribute('aria-expanded', 'false');
   }
 
   // Helper to open drawer
@@ -8330,7 +9292,17 @@ function initMobileControls() {
     if (sidebar) sidebar.classList.add('open');
     if (overlay) overlay.classList.add('active');
     syncSidebarInteractivity();
+    mobileMenuToggle?.setAttribute('aria-expanded', 'true');
+    sidebarCloseBtn?.focus({ preventScroll: true });
   }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !sidebar?.classList.contains('open')) return;
+    if (window.innerWidth > COMPACT_LAYOUT_MAX_WIDTH) return;
+    event.preventDefault();
+    closeSidebar();
+    mobileMenuToggle?.focus({ preventScroll: true });
+  });
 
   // Sidebar toggle events
   if (mobileMenuToggle) {
@@ -8343,11 +9315,18 @@ function initMobileControls() {
     overlay.addEventListener('click', closeSidebar);
   }
 
+  mobileMenuToggle?.setAttribute('aria-expanded', 'false');
+  tabButtons.forEach(btn => btn.setAttribute('aria-pressed', String(btn.classList.contains('active'))));
+
   // Tab switching events
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      tabButtons.forEach(b => b.classList.remove('active'));
+      tabButtons.forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+      });
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
 
       const targetTab = btn.getAttribute('data-tab');
       if (targetTab === 'editor') {
@@ -8422,7 +9401,8 @@ function initState() {
   if (appStateInitialized) return;
   appStateInitialized = true;
   applyLocale();
-  const savedTheme = readStoredValue('theme', 'dark');
+  // Only two themes exist; ignore any other stored value.
+  const savedTheme = readStoredValue('theme', 'dark') === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
 
   const themeLabel = document.querySelector('#btn-theme span');
@@ -8463,33 +9443,46 @@ function initAboutPanel() {
   const panel = document.getElementById('about-panel');
   const overlay = document.getElementById('about-overlay');
   const closeBtn = document.getElementById('about-close-btn');
-  const openButtons = ['btn-about', 'btn-mobile-help'].map(id => document.getElementById(id)).filter(Boolean);
-  if (!panel || !closeBtn) return;
+  const openButton = document.getElementById('btn-about');
+  const body = document.getElementById('about-panel-body');
+  if (!panel || !closeBtn || !openButton) return;
   let returnFocus = null;
+  // The body scrolls; making it focusable lets keyboard users read it all.
+  if (body) body.tabIndex = 0;
 
   function close() {
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
     panel.inert = true;
     overlay?.classList.remove('active');
-    returnFocus?.focus();
+    // On compact layouts the opener lives in the (now closed) drawer.
+    const target = returnFocus?.closest('[inert]') ? document.getElementById('btn-mobile-menu') : returnFocus;
+    target?.focus({ preventScroll: true });
   }
-  for (const button of openButtons) button.addEventListener('click', () => {
-    returnFocus = button;
+  openButton.addEventListener('click', () => {
+    returnFocus = openButton;
     panel.inert = false;
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     overlay?.classList.add('active');
+    if (body) body.scrollTop = 0;
     closeBtn.focus();
   });
   closeBtn.addEventListener('click', close);
   overlay?.addEventListener('click', close);
   document.addEventListener('keydown', event => {
     if (!panel.classList.contains('open')) return;
-    if (event.key === 'Escape') close();
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+      return;
+    }
     if (event.key === 'Tab') {
       event.preventDefault();
-      closeBtn.focus();
+      const stops = [closeBtn, body].filter(Boolean);
+      const index = stops.indexOf(document.activeElement);
+      const next = event.shiftKey ? index - 1 : index + 1;
+      stops[(next + stops.length) % stops.length].focus();
     }
   });
 }
@@ -8512,14 +9505,32 @@ let previewDiagnosticFilter = 'all';
 const PREVIEW_CONSOLE_HEIGHT_KEY = 'html-viewer-preview-console-height';
 
 function getDiagnosticLabel(type) {
-  return ({ error: 'JavaScript', warning: 'Aviso', resource: 'Recurso', route: 'Ruta', cors: 'CORS/red' })[type] || 'Diagnóstico';
+  return ['error', 'warning', 'resource', 'route', 'cors'].includes(type) ? t(`diag_${type}`) : t('diag_generic');
 }
 
 function getDiagnosticHint(item) {
-  if (item.type === 'cors') return 'El servidor remoto puede estar bloqueando la petición. Revisa Access-Control-Allow-Origin y la URL.';
-  if (item.type === 'route') return 'Comprueba que la ruta exista y que respete mayúsculas, carpetas y extensión.';
-  if (item.type === 'resource') return 'Comprueba la ruta del archivo y que el recurso esté incluido en el proyecto.';
-  return '';
+  return ['cors', 'route', 'resource'].includes(item.type) ? t(`diag_hint_${item.type}`) : '';
+}
+
+function getDiagnosticSummary(count) {
+  if (!count) return t('console_none');
+  return count === 1 ? t('console_count_one') : t('console_count_other', { count });
+}
+
+// Show project files by their project path instead of the internal virtual
+// URL; srcdoc documents have no meaningful location of their own.
+function formatDiagnosticLocation(value) {
+  const text = String(value || '');
+  if (!text || /^about:srcdoc/i.test(text)) return '';
+  const projectPath = getProjectPreviewPathFromUrl(text);
+  if (projectPath) return projectPath;
+  if (/^blob:/i.test(text)) return '';
+  // Files previews report their published URLs: show the site path.
+  try {
+    const url = new URL(text);
+    if (url.origin === location.origin) return `${decodeUrlPathComponent(url.pathname)}${url.search}`;
+  } catch {}
+  return text;
 }
 
 function renderPreviewDiagnostics() {
@@ -8529,7 +9540,7 @@ function renderPreviewDiagnostics() {
   if (!visible.length) {
     const empty = document.createElement('div');
     empty.className = 'preview-console-empty';
-    empty.textContent = previewDiagnostics.length ? 'No hay problemas de este tipo.' : 'No se han detectado problemas.';
+    empty.textContent = previewDiagnostics.length ? t('console_empty_filtered') : t('console_empty');
     previewConsoleList.appendChild(empty);
   }
   visible.forEach(item => {
@@ -8545,11 +9556,12 @@ function renderPreviewDiagnostics() {
     message.textContent = item.message;
     heading.append(label, message);
     row.appendChild(heading);
-    const locationText = item.resourceUrl || item.sourceUrl || item.url;
+    const locationText = formatDiagnosticLocation(item.resourceUrl || item.sourceUrl || item.url);
     if (locationText) {
       const location = document.createElement('div');
       location.className = 'preview-console-location';
       location.textContent = `${locationText}${item.line ? `:${item.line}${item.column ? `:${item.column}` : ''}` : ''}`;
+      location.title = item.resourceUrl || item.sourceUrl || item.url;
       row.appendChild(location);
     }
     const hintText = getDiagnosticHint(item);
@@ -8562,11 +9574,16 @@ function renderPreviewDiagnostics() {
     previewConsoleList.appendChild(row);
   });
   const count = previewDiagnostics.length;
-  previewConsoleSummary.textContent = count ? `${count} problema${count === 1 ? '' : 's'}` : 'Sin problemas';
+  const summary = getDiagnosticSummary(count);
+  previewConsoleSummary.textContent = summary;
+  previewConsoleSummary.classList.toggle('has-issues', count > 0);
   previewConsoleBadge.hidden = count === 0;
   previewConsoleBadge.textContent = count > 99 ? '99+' : String(count);
   previewConsoleButton?.classList.toggle('has-diagnostics', count > 0);
-  previewConsoleButton?.setAttribute('title', count ? `Consola de diagnóstico: ${count} problema${count === 1 ? '' : 's'}` : 'Consola de diagnóstico');
+  const buttonLabel = count ? t('console_button_title', { summary }) : t('console_open');
+  previewConsoleButton?.setAttribute('title', buttonLabel);
+  previewConsoleButton?.setAttribute('aria-label', buttonLabel);
+  if (previewConsoleClear) previewConsoleClear.disabled = count === 0;
 }
 
 const clearPreviewDiagnosticsState = () => {
@@ -8575,10 +9592,12 @@ const clearPreviewDiagnosticsState = () => {
 };
 window.clearPreviewDiagnostics = clearPreviewDiagnosticsState;
 
-function setPreviewConsoleOpen(open) {
+function setPreviewConsoleOpen(open, { restoreFocus = false } = {}) {
   if (!previewConsolePanel) return;
   previewConsolePanel.hidden = !open;
   previewConsoleButton?.setAttribute('aria-expanded', String(open));
+  previewConsoleButton?.classList.toggle('active', open);
+  if (!open && restoreFocus) previewConsoleButton?.focus({ preventScroll: true });
 }
 
 function getPreviewConsoleHeightLimits() {
@@ -8673,13 +9692,21 @@ window.addEventListener('message', event => {
 });
 
 previewConsoleButton?.addEventListener('click', () => setPreviewConsoleOpen(previewConsolePanel?.hidden));
-previewConsoleClose?.addEventListener('click', () => setPreviewConsoleOpen(false));
+previewConsoleClose?.addEventListener('click', () => setPreviewConsoleOpen(false, { restoreFocus: true }));
+previewConsolePanel?.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  event.stopPropagation();
+  setPreviewConsoleOpen(false, { restoreFocus: true });
+});
 previewConsoleClear?.addEventListener('click', clearPreviewDiagnosticsState);
 previewConsoleFilters?.addEventListener('click', event => {
   const button = event.target.closest('[data-diagnostic-filter]');
   if (!button) return;
   previewDiagnosticFilter = button.dataset.diagnosticFilter;
-  previewConsoleFilters.querySelectorAll('button').forEach(item => item.classList.toggle('active', item === button));
+  previewConsoleFilters.querySelectorAll('button').forEach(item => {
+    item.classList.toggle('active', item === button);
+    item.setAttribute('aria-pressed', String(item === button));
+  });
   renderPreviewDiagnostics();
 });
 renderPreviewDiagnostics();
@@ -8843,7 +9870,12 @@ function recoverySnapshotLooksUseful(snapshot) {
     snapshot &&
     Array.isArray(snapshot.files) &&
     snapshot.userInitiated !== false &&
-    snapshot.files.some(file => file && !file.isFolder)
+    snapshot.files.some(file => file && !file.isFolder) &&
+    // An emptied editor is nothing to recover; announcing it would be noise.
+    (
+      String(snapshot.unifiedContent || '').trim() ||
+      snapshot.files.some(file => file && !file.isFolder && (file.isBinary || String(file.content || '').trim()))
+    )
   );
 }
 

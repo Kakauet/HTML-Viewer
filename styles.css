@@ -1608,7 +1608,7 @@ i[data-lucide] {
 }
 
 [data-theme="dark"] .preview-iframe.is-empty {
-  background: #1e1e24;
+  background: #0b0d13;
 }
 
 .iframe-wrapper.restricted-mobile .preview-iframe,
@@ -2777,10 +2777,113 @@ i[data-lucide] {
 .sidebar-links a:hover { color: var(--accent-color); }
 .skip-link { position: fixed; left: 16px; top: -80px; z-index: 2000; padding: 12px; border-radius: 8px; background: var(--panel-bg); color: var(--text-primary); }
 .skip-link:focus { top: 12px; }
-.mobile-help-link { border: 1px solid var(--panel-border); border-radius: 8px; background: var(--panel-header-bg); color: var(--text-secondary); width: 32px; height: 32px; cursor: pointer; }
 .nojs-note { margin: 20vh auto; padding: 24px; text-align: center; }
 
 :where(button, a, input, textarea, summary):focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
 }
+
+/* ================================================
+   Interaction refinements
+   ================================================ */
+
+/* Toast with an inline action such as Undo. */
+.toast-action {
+  margin-left: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--button-secondary-bg);
+  color: var(--accent-purple-light);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.toast-action:hover {
+  background: var(--button-secondary-hover);
+  border-color: rgba(136, 66, 253, 0.45);
+  color: var(--text-primary);
+}
+
+/* Explorer rows are reachable with the keyboard. */
+.file-item:focus-visible,
+.folder-item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.file-item:focus-visible .file-item-actions,
+.file-item:focus-within .file-item-actions {
+  opacity: 1;
+  max-width: 104px;
+}
+
+.folder-item:focus-visible .folder-item-actions,
+.folder-item:focus-within .folder-item-actions {
+  opacity: 1;
+  max-width: 120px;
+}
+
+/* Keyboard-focused split handle shows its line like the hover state. */
+.resize-handle:focus-visible {
+  outline: none;
+}
+
+.resize-handle:focus-visible .resize-line {
+  opacity: 1;
+  background: var(--accent-color);
+}
+
+/* Diagnostics console states. */
+.preview-console-btn.active {
+  color: var(--text-primary);
+  border-color: rgba(136, 66, 253, 0.34);
+  background: rgba(136, 66, 253, 0.08);
+}
+
+.preview-console-summary.has-issues {
+  color: #d5a64a;
+}
+
+.preview-console-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}
+
+.about-note {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* With the explorer hidden on desktop, keep the open file named in the
+   header (the summary button also reopens the explorer). */
+@media (min-width: 769px) {
+  .editor-panel:has(.file-explorer.collapsed, .file-explorer[style*="display: none"]) #active-file-summary[style*="flex"] {
+    display: flex !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Small status text needs darker hues to stay legible on light headers. */
+[data-theme="light"] .preview-status[data-state="ready"],
+[data-theme="light"] .preview-status[data-state="idle"] { color: #047857; }
+[data-theme="light"] .preview-status[data-state="rendering"],
+[data-theme="light"] .preview-status[data-state="syncing"] { color: #b45309; }
+[data-theme="light"] .preview-status.is-error { color: #b91c1c; }
+[data-theme="light"] .preview-console-summary.has-issues { color: #b45309; }

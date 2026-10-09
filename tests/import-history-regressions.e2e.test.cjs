@@ -90,7 +90,8 @@ test('importación, deshacer/rehacer y preview comparten la misma revisión', as
   await importHtml(page, 'B');
   await page.getByRole('button', { name: 'Deshacer', exact: true }).click();
   await page.frameLocator('#preview-iframe').locator('#marker').filter({ hasText: 'A' }).waitFor();
-  let state = await page.evaluate(() => ({ editor: editor.getValue(), preview: previewIframe.contentDocument.body.innerText, sameModel: editor.getModel() === unifiedModel }));
+  let state = await page.evaluate(() => ({ editor: editor.getValue(), sameModel: editor.getModel() === unifiedModel }));
+  state.preview = await page.frameLocator('#preview-iframe').locator('body').innerText();
   assert.match(state.editor, />A</);
   assert.match(state.preview, /A/);
   assert.equal(state.sameModel, true);
@@ -98,7 +99,7 @@ test('importación, deshacer/rehacer y preview comparten la misma revisión', as
   await page.getByRole('button', { name: 'Rehacer', exact: true }).click();
   await page.frameLocator('#preview-iframe').locator('#marker').filter({ hasText: 'B' }).waitFor();
   await importHtml(page, 'C');
-  state = await page.evaluate(() => ({ editor: editor.getValue(), preview: previewIframe.contentDocument.body.innerText }));
+  state = { editor: await page.evaluate(() => editor.getValue()), preview: await page.frameLocator('#preview-iframe').locator('body').innerText() };
   assert.match(state.editor, />C</);
   assert.match(state.preview, /C/);
   await page.close();
@@ -140,9 +141,9 @@ test('Archivos conserva HTML íntegro y Monaco conecta el archivo activo tras ca
   const state = await page.evaluate(() => ({
     source: getFileText(getEntryFile()),
     mode: editorMode,
-    sameModel: editor.getModel() === unifiedModel,
-    color: getComputedStyle(previewIframe.contentDocument.body).color
+    sameModel: editor.getModel() === unifiedModel
   }));
+  state.color = await page.frameLocator('#preview-iframe').locator('body').evaluate(body => getComputedStyle(body).color);
   assert.equal(state.source, source);
   assert.equal(state.mode, 'split');
   assert.equal(state.sameModel, false);

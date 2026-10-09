@@ -509,52 +509,15 @@ function injectPreviewGuardIntoHtml(htmlContent, guardStyle, guardScript) {
   return `${payload}\n${result}`;
 }
 
-function createPreviewDiagnosticsBridge(renderToken = '') {
-  const fallbackRenderToken = JSON.stringify(String(renderToken ?? ''));
-  return `<script data-html-viewer-diagnostics>
-(() => {
-  if (window.__htmlViewerDiagnosticsInstalled) return;
-  window.__htmlViewerDiagnosticsInstalled = true;
-  const channel = 'html-viewer-preview-diagnostic';
-  const fallbackRenderToken = ${fallbackRenderToken};
-  const getRenderToken = () => {
-    try { return new URL(location.href).searchParams.get(${JSON.stringify(PROJECT_PREVIEW_VERSION_PARAM)}) || fallbackRenderToken; }
-    catch { return fallbackRenderToken; }
-  };
-  const text = value => {
-    if (value instanceof Error) return value.stack || value.message;
-    if (typeof value === 'string') return value;
-    try { return JSON.stringify(value); } catch { return String(value); }
-  };
-  const send = (type, message, details = {}) => {
-    try { parent.postMessage({ channel, type, message: text(message), url: location.href, time: Date.now(), renderToken: getRenderToken(), ...details }, '*'); } catch {}
-  };
-  ['error', 'warn'].forEach(level => {
-    const original = console[level];
-    console[level] = function(...args) {
-      send(level === 'error' ? 'error' : 'warning', args.map(text).join(' '), { source: 'console' });
-      return original.apply(this, args);
-    };
-  });
-  addEventListener('error', event => {
-    const target = event.target;
-    if (target && target !== window) {
-      send('resource', 'No se pudo cargar el recurso', { resourceUrl: target.src || target.href || target.currentSrc || '', tag: target.tagName || '' });
-      return;
-    }
-    send('error', event.message || 'Error JavaScript', { sourceUrl: event.filename || '', line: event.lineno || 0, column: event.colno || 0, stack: event.error?.stack || '' });
-  }, true);
-  addEventListener('unhandledrejection', event => send('error', event.reason || 'Promesa rechazada sin gestionar', { source: 'promise' }));
-  send('ready', 'preview-runtime-ready');
-})();
-</script>`;
-}
-
-function applyNonDraggableImageGuard(htmlContent, { preventPreviewFocus = false, renderToken = '' } = {}) {
+// Every preview document gets the runtime (diagnostics, isolated storage
+// and, in Files, clean URLs and project navigation) as its first script, plus
+// the render token the editor uses to recognise the load it requested.
+function applyNonDraggableImageGuard(htmlContent, { preventPreviewFocus = false, renderToken = '', mode = 'document' } = {}) {
   void preventPreviewFocus;
   const guardAttribute = 'data-html-viewer-runtime';
-  const safeRenderToken = JSON.stringify(String(renderToken ?? ''));
-  const guardScript = `${createPreviewDiagnosticsBridge(renderToken)}\n<script ${guardAttribute}>
+  const safeRenderToken = JSON.stringify(String(renderToken ?? '')).replace(/</g, '\\u003c');
+  const guardScript = `${createPreviewRuntimeScript({ mode, renderToken })}
+<script ${guardAttribute}-token>
  (() => {
    try { document.documentElement?.setAttribute('data-html-viewer-render-token', ${safeRenderToken}); } catch {}
  })();

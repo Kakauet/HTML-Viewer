@@ -181,9 +181,9 @@ function createImageZoomViewer(file) {
   const controls = document.createElement('div');
   controls.className = 'asset-zoom-controls';
   controls.innerHTML = `
-    <button type="button" class="asset-zoom-btn" data-zoom-action="out" title="Alejar"><i data-lucide="minus"></i></button>
-    <button type="button" class="asset-zoom-btn asset-zoom-value" data-zoom-action="reset" title="Restablecer">100%</button>
-    <button type="button" class="asset-zoom-btn" data-zoom-action="in" title="Acercar"><i data-lucide="plus"></i></button>
+    <button type="button" class="asset-zoom-btn" data-zoom-action="out" title="${escapeHtml(t('zoom_out'))}" aria-label="${escapeHtml(t('zoom_out'))}"><i data-lucide="minus"></i></button>
+    <button type="button" class="asset-zoom-btn asset-zoom-value" data-zoom-action="reset" title="${escapeHtml(t('zoom_reset'))}" aria-label="${escapeHtml(t('zoom_reset'))}">100%</button>
+    <button type="button" class="asset-zoom-btn" data-zoom-action="in" title="${escapeHtml(t('zoom_in'))}" aria-label="${escapeHtml(t('zoom_in'))}"><i data-lucide="plus"></i></button>
   `;
 
   viewport.append(image, controls);
@@ -410,6 +410,13 @@ async function copyToClipboard(text, successMessage) {
   }
 }
 
+// Paths are copied relative to the entry HTML so they resolve when pasted
+// there (the stored path also contains the project's root folder).
+function getAssetReferencePath(file) {
+  const entryFile = getEntryFile();
+  return entryFile && entryFile.id !== file.id ? makeRelativePath(entryFile.name, file.name) : getBaseName(file.name);
+}
+
 function initAssetPreviewActions() {
   const copyPathBtn = document.getElementById('btn-copy-asset-path');
   const copyImgBtn = document.getElementById('btn-copy-asset-img');
@@ -418,7 +425,7 @@ function initAssetPreviewActions() {
   if (copyPathBtn) {
     copyPathBtn.addEventListener('click', () => {
       const file = files.find(f => f.id === activeFileId);
-      if (file && !file.isFolder) copyToClipboard(file.name, t('toast_path_copied'));
+      if (file && !file.isFolder) copyToClipboard(getAssetReferencePath(file), t('toast_path_copied'));
     });
   }
 
@@ -426,7 +433,7 @@ function initAssetPreviewActions() {
     copyImgBtn.addEventListener('click', () => {
       const file = files.find(f => f.id === activeFileId);
       if (file && IMAGE_EXTENSIONS.has(getFileExtension(file.name))) {
-        copyToClipboard(`<img src="${file.name}" alt="">`, t('toast_img_tag_copied'));
+        copyToClipboard(`<img src="${escapeHtml(getAssetReferencePath(file))}" alt="">`, t('toast_img_tag_copied'));
       }
     });
   }
@@ -434,7 +441,7 @@ function initAssetPreviewActions() {
   if (copyCssBtn) {
     copyCssBtn.addEventListener('click', () => {
       const file = files.find(f => f.id === activeFileId);
-      if (file && !file.isFolder) copyToClipboard(`url("${file.name}")`, t('toast_css_url_copied'));
+      if (file && !file.isFolder) copyToClipboard(`url("${getAssetReferencePath(file).replace(/"/g, '\\"')}")`, t('toast_css_url_copied'));
     });
   }
 }

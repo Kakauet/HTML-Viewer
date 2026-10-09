@@ -155,7 +155,12 @@ function recoverySnapshotLooksUseful(snapshot) {
     snapshot &&
     Array.isArray(snapshot.files) &&
     snapshot.userInitiated !== false &&
-    snapshot.files.some(file => file && !file.isFolder)
+    snapshot.files.some(file => file && !file.isFolder) &&
+    // An emptied editor is nothing to recover; announcing it would be noise.
+    (
+      String(snapshot.unifiedContent || '').trim() ||
+      snapshot.files.some(file => file && !file.isFolder && (file.isBinary || String(file.content || '').trim()))
+    )
   );
 }
 

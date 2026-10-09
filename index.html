@@ -3,6 +3,7 @@
 <html lang="en" data-theme="dark" class="editor-page">
 <head>
   <meta charset="utf-8">
+  <script>(()=>{try{const f=window.frameElement;if(!f)return;const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\/$/,''),back=location.pathname.replace(/\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"><title>HTML Viewer</title><meta name="description" content="HTML, CSS and JavaScript editor with live preview and project import."><meta name="theme-color" content="#8842FD"><link rel="icon" href="./favicon.ico"><link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <script>
     (() => {
@@ -85,11 +86,11 @@
     /* Minified layout.css inlined */
     :root{--workspace-edge: 16px;--workspace-panel-gap: 8px;--workspace-resizer-width: 16px;--editor-panel-min: 420px;--preview-panel-min: 420px;}.workspace-shell{--split-percent: var(--saved-split-percent, 55%);display: flex;align-items: stretch;min-width: 0;}.workspace-shell>.panel{margin-top: var(--workspace-edge);margin-bottom: var(--workspace-edge);}.workspace-shell>.panel--editor{flex: 0 1 var(--split-percent);min-width: var(--editor-panel-min);margin-left: var(--workspace-edge);margin-right: var(--workspace-panel-gap);}.workspace-shell>.workspace-resizer{flex: 0 0 var(--workspace-resizer-width);width: var(--workspace-resizer-width);margin: var(--workspace-edge) calc(var(--workspace-panel-gap) * -1);}.workspace-shell>.panel--preview{flex: 1 1 0;min-width: var(--preview-panel-min);margin-left: var(--workspace-panel-gap);margin-right: var(--workspace-edge);}.panel-header--preview{gap: 6px;min-width: 0;}.panel-title--icon{flex: 0 0 16px;min-width: 16px;justify-content: flex-start;}.preview-header-actions{display: flex;align-items: center;gap: 8px;margin-left: auto;flex: 0 1 auto;min-width: 0;}.device-controls{flex: 0 1 auto;min-width: 0;}.device-controls .control-btn{min-width: 28px;white-space: nowrap;justify-content: center;}@container (max-width: 440px){.panel-header--preview{padding-inline: 10px;}.device-controls .control-btn span{max-width: 0;opacity: 0;}.device-controls .control-btn{padding-inline: 7px;gap: 0;}}@media (max-width: 1152px){.workspace-shell>.panel{margin: 0;}.workspace-shell>.panel--editor,.workspace-shell>.panel--preview{min-width: 0;}}
   </style>
-  <link rel="stylesheet" href="./styles.min.css?v=20339c1e9861">
+  <link rel="stylesheet" href="./styles.min.css?v=b5f1c966fdf2">
   <!-- Lucide Icons (local copy avoids intermittent CDN startup failures) -->
   <script defer src="./lucide.min.js?v=f87e9a326d5d"></script>
   <!-- JSZip is loaded on demand by the import/export module. -->
-  <script defer src="./app.bundle.js?v=a85f0234fed0"></script>
+  <script defer src="./app.bundle.js?v=8a5477d344fe"></script>
 </head>
 <body>
   <a class="skip-link" href="#workspace-container">Skip to editor</a>
@@ -101,7 +102,6 @@
         <i data-lucide="menu"></i>
       </button>
       <div class="mobile-brand">HTML Viewer</div>
-      <button id="btn-mobile-help" class="mobile-help-link" aria-label="Help">?</button>
       <div class="mobile-tabs">
         <button class="mobile-tab-btn active" data-tab="editor">
           <i data-lucide="code-2"></i>
@@ -170,7 +170,6 @@
           </span>
         </button>
         <div class="sidebar-links">
-          <a href="https://github.com/Kakauet/HTML-Viewer" rel="external">GitHub</a>
           <a class="language-link" href="./es/" lang="es">Español</a>
         </div>
       </div>
@@ -231,7 +230,7 @@
             <div class="file-explorer" id="file-explorer" style="display: none;">
               <div class="file-explorer-header">
                 <div class="file-explorer-heading">
-                  <span data-i18n="choose_file">Choose file</span>
+                  <span data-i18n="explorer_title">Explorer</span>
                 </div>
                 <div class="file-explorer-actions" style="display: flex; gap: 4px;">
                   <button class="file-explorer-btn" id="btn-upload-asset" data-i18n-title="upload_files" data-i18n-aria-label="upload_files" title="Upload files" aria-label="Upload files">
@@ -298,7 +297,7 @@
             <div class="panel-title panel-title--icon">
               <i data-lucide="eye"></i>
             </div>
-            <div id="preview-status" class="preview-status" role="status" aria-live="polite">Listo</div>
+            <div id="preview-status" class="preview-status" role="status" aria-live="polite" data-i18n="preview_ready">Ready</div>
 
             <!-- Responsive sizes controls -->
           <div class="preview-header-actions" id="preview-header-actions">
@@ -308,7 +307,7 @@
             <button class="preview-reload-btn" id="btn-preview-reload" data-i18n-title="emulator_reload" data-i18n-aria-label="emulator_reload" title="Reload preview" aria-label="Reload preview">
               <i data-lucide="rotate-cw"></i>
             </button>
-            <button class="preview-reload-btn preview-console-btn" id="btn-preview-console" title="Consola de diagnóstico" aria-label="Abrir consola de diagnóstico" aria-expanded="false">
+            <button class="preview-reload-btn preview-console-btn" id="btn-preview-console" data-i18n-title="console_open" data-i18n-aria-label="console_open" title="Open diagnostics console" aria-label="Open diagnostics console" aria-controls="preview-console" aria-expanded="false">
               <i data-lucide="terminal-square"></i>
               <span class="preview-console-badge" id="preview-console-badge" hidden>0</span>
             </button>
@@ -343,19 +342,19 @@
                 isolation would require serving the preview from a dedicated
                 subdomain (an infra change, not configurable here).
               -->
-              <iframe id="preview-iframe" class="preview-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation"></iframe>
+              <iframe id="preview-iframe" class="preview-iframe" data-html-viewer-preview sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation" allow="accelerometer *; autoplay *; camera *; clipboard-read *; clipboard-write *; display-capture *; encrypted-media *; fullscreen *; geolocation *; gyroscope *; magnetometer *; microphone *; midi *; picture-in-picture *; screen-wake-lock *; xr-spatial-tracking *; payment &#39;none&#39;; usb &#39;none&#39;; serial &#39;none&#39;; hid &#39;none&#39;; bluetooth &#39;none&#39;; publickey-credentials-get &#39;none&#39;; identity-credentials-get &#39;none&#39;"></iframe>
             </div>
-            <section class="preview-console" id="preview-console" aria-label="Consola de diagnóstico" hidden>
-              <div class="preview-console-resizer" id="preview-console-resizer" role="separator" aria-label="Cambiar altura de la consola" aria-orientation="horizontal" tabindex="0"><span></span></div>
+            <section class="preview-console" id="preview-console" data-i18n-aria-label="console_title" aria-label="Diagnostics" hidden>
+              <div class="preview-console-resizer" id="preview-console-resizer" role="separator" data-i18n-aria-label="console_resize" aria-label="Resize console" aria-orientation="horizontal" tabindex="0"><span></span></div>
               <header class="preview-console-header">
-                <div class="preview-console-title"><i data-lucide="terminal-square"></i><span>Diagnóstico</span><span class="preview-console-summary" id="preview-console-summary">Sin problemas</span></div>
+                <div class="preview-console-title"><i data-lucide="terminal-square"></i><span data-i18n="console_title">Diagnostics</span><span class="preview-console-summary" id="preview-console-summary" data-i18n="console_none">No issues</span></div>
                 <div class="preview-console-actions">
-                  <button type="button" id="btn-preview-console-clear">Limpiar</button>
-                  <button type="button" id="btn-preview-console-close" aria-label="Cerrar consola"><i data-lucide="x"></i></button>
+                  <button type="button" id="btn-preview-console-clear" data-i18n="console_clear">Clear</button>
+                  <button type="button" id="btn-preview-console-close" data-i18n-title="console_close" data-i18n-aria-label="console_close" title="Close console" aria-label="Close console"><i data-lucide="x"></i></button>
                 </div>
               </header>
-              <div class="preview-console-filters" id="preview-console-filters">
-                <button type="button" class="active" data-diagnostic-filter="all">Todos</button><button type="button" data-diagnostic-filter="error">JS</button><button type="button" data-diagnostic-filter="resource">Recursos</button><button type="button" data-diagnostic-filter="route">Rutas</button><button type="button" data-diagnostic-filter="cors">CORS/red</button>
+              <div class="preview-console-filters" id="preview-console-filters" role="toolbar" data-i18n-aria-label="console_filters" aria-label="Filter diagnostics">
+                <button type="button" class="active" aria-pressed="true" data-diagnostic-filter="all" data-i18n="console_filter_all">All</button><button type="button" aria-pressed="false" data-diagnostic-filter="error">JS</button><button type="button" aria-pressed="false" data-diagnostic-filter="resource" data-i18n="console_filter_resource">Resources</button><button type="button" aria-pressed="false" data-diagnostic-filter="route" data-i18n="console_filter_route">Routes</button><button type="button" aria-pressed="false" data-diagnostic-filter="cors" data-i18n="console_filter_cors">CORS/network</button>
               </div>
               <div class="preview-console-list" id="preview-console-list" role="log" aria-live="polite"></div>
             </section>
@@ -383,17 +382,17 @@
   </div>
 
   <!-- Modal Exportar -->
-  <div class="modal-overlay" id="modal-export" style="display: none;">
+  <div class="modal-overlay" id="modal-export" role="dialog" aria-modal="true" aria-labelledby="export-title" style="display: none;">
     <div class="modal-card">
       <header class="modal-header">
         <div class="modal-title-group">
           <i data-lucide="file-down" class="modal-title-icon"></i>
           <div>
-            <h3 data-i18n="export_title">Export Project</h3>
+            <h3 id="export-title" data-i18n="export_title">Export Project</h3>
             <p data-i18n="export_subtitle">Choose the output format to save your code</p>
           </div>
         </div>
-        <button class="modal-close-btn" id="modal-export-close" data-i18n-aria-label="mobile_close_menu" aria-label="Close menu">
+        <button class="modal-close-btn" id="modal-export-close" data-i18n-aria-label="close_dialog" aria-label="Close">
           <i data-lucide="x"></i>
         </button>
       </header>
@@ -438,14 +437,14 @@
     <div class="about-panel-content">
       <header class="about-panel-header">
         <h2 id="help-title" data-i18n="about_title">Help</h2>
-        <button class="about-close-btn" id="about-close-btn" data-i18n-aria-label="mobile_close_menu" aria-label="Close menu">
+        <button class="about-close-btn" id="about-close-btn" data-i18n-aria-label="close_dialog" aria-label="Close">
           <i data-lucide="x"></i>
         </button>
       </header>
       <div class="about-panel-body" id="about-panel-body"><section class="about-section"><h3>Edit and preview</h3><p>Use Simple for one HTML document. Use Files for a project with HTML, CSS, JavaScript and assets in folders. The preview updates as you edit.</p></section>
 <section class="about-section"><h3>Import and save</h3><p>Import HTML or ZIP with the buttons or by dragging it into the editor. Export HTML, ZIP or a local folder when your browser supports it.</p></section>
 <section class="about-section"><h3>Local storage</h3><p>Files are processed in your browser. Theme, layout and editor recovery use local browser storage. Export a copy to keep your work; clearing browser data removes recovery.</p></section>
-<section class="about-section"><h3>Project preview</h3><p>Files mode requires HTTPS or localhost. Use browser-ready code; projects that need a server or a build must be prepared before import. Scripts and resources in the preview can access the Internet.</p></section><section class="about-section"><h3>Keyboard shortcuts</h3><div class="about-shortcuts-list"><div class="about-shortcut-row"><kbd>Ctrl + Z</kbd><span>Undo</span></div><div class="about-shortcut-row"><kbd>Ctrl + Y</kbd><span>Redo</span></div><div class="about-shortcut-row"><kbd>Ctrl + S</kbd><span>Export</span></div><div class="about-shortcut-row"><kbd>Ctrl + +/−</kbd><span>Editor zoom</span></div><div class="about-shortcut-row"><kbd>Ctrl + 0</kbd><span>Reset zoom</span></div></div></section>
+<section class="about-section"><h3>Project preview</h3><p>Files mode requires HTTPS or localhost. Use browser-ready code; projects that need a server or a build must be prepared before import. Scripts and resources in the preview can access the Internet.</p></section><section class="about-section"><h3>Keyboard shortcuts</h3><div class="about-shortcuts-list"><div class="about-shortcut-row"><kbd>Ctrl + Z</kbd><span>Undo</span></div><div class="about-shortcut-row"><kbd>Ctrl + Y</kbd><span>Redo</span></div><div class="about-shortcut-row"><kbd>Ctrl + S</kbd><span>Export</span></div><div class="about-shortcut-row"><kbd>Ctrl + O</kbd><span>Import</span></div><div class="about-shortcut-row"><kbd>Ctrl + P</kbd><span>Open full page</span></div><div class="about-shortcut-row"><kbd>Ctrl + +/−</kbd><span>Editor zoom</span></div><div class="about-shortcut-row"><kbd>Ctrl + 0</kbd><span>Reset zoom</span></div></div><p class="about-note">On macOS, use ⌘ instead of Ctrl.</p></section>
       </div>
     </div>
   </aside>

@@ -210,12 +210,11 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
 
   const rootFolder = getProjectRootFolder();
   if (!targetFolder.startsWith(rootFolder)) {
-    showToast('No se pueden mover elementos fuera de la carpeta madre', 'error');
+    showToast(t('toast_move_outside_root_error'), 'error');
     return false;
   }
 
   let pathChanges = [];
-  saveHistoryState();
 
   if (source.kind === 'file') {
     const file = files.find(item => item.id === source.id);
@@ -224,9 +223,10 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
     const newPath = joinProjectPath(targetFolder, getBaseName(file.name));
     if (oldPath === newPath) return true;
     if (files.some(item => item.id !== file.id && item.name.toLowerCase() === newPath.toLowerCase())) {
-      showToast('Ya existe un archivo con ese nombre en esa carpeta', 'error');
+      showToast(t('toast_file_exists_in_folder'), 'error');
       return false;
     }
+    saveHistoryState();
 
     file.name = newPath;
     file.type = getFileExtension(newPath) || file.type;
@@ -241,16 +241,17 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
     const oldPath = normalizeProjectPath(source.path, { folder: true });
     if (!oldPath) return false;
     if (targetFolder.startsWith(oldPath)) {
-      showToast('No se puede mover una carpeta dentro de sí misma', 'error');
+      showToast(t('toast_move_inside_self_error'), 'error');
       return false;
     }
 
     const newPath = joinProjectPath(targetFolder, getBaseName(oldPath), { folder: true });
     if (oldPath === newPath) return true;
     if (files.some(item => item.id !== source.id && item.name.toLowerCase() === newPath.toLowerCase())) {
-      showToast('Ya existe una carpeta con ese nombre en esa ubicación', 'error');
+      showToast(t('toast_folder_exists_in_location'), 'error');
       return false;
     }
+    saveHistoryState();
 
     const movingFiles = files.filter(file => file.name.startsWith(oldPath));
     movingFiles.forEach(file => {
@@ -277,7 +278,7 @@ function moveVfsItemToFolder(source, targetFolderPath = '') {
   updatePreview();
   window.scheduleRecoverySave?.();
   if (updatedRefs > 0) {
-    showToast(`${updatedRefs} archivo(s) actualizados con rutas nuevas`, 'info');
+    showToast(t('toast_files_updated_paths', { count: updatedRefs }), 'info');
   }
   return true;
 }
@@ -286,6 +287,10 @@ function reorderVfsItemAround(source, targetPath, position) {
   const target = getFileByPath(targetPath);
   if (!target) return false;
   const targetParent = getParentPath(target.name);
+  const sourceParent = getParentPath(normalizeProjectPath(source.path || '', { folder: source.kind === 'folder' }));
+  // A move records its own history step; a reorder inside the same folder
+  // only changes ordering, so record it here.
+  if (sourceParent === normalizeProjectPath(targetParent, { folder: true })) saveHistoryState();
   if (!moveVfsItemToFolder(source, targetParent)) return false;
 
   const sourceRecord = source.kind === 'file'
@@ -481,7 +486,18 @@ function renderFileExplorer() {
   updateEntryHtmlSelector();
 
   const savedScrollTop = fileListContainer.scrollTop;
+  // Re-rendering replaces every row; keep keyboard focus on the same item.
+  const focusedRow = document.activeElement?.closest?.('.file-item, .folder-item');
+  const focusedKey = focusedRow && fileListContainer.contains(focusedRow)
+    ? (focusedRow.dataset.fileId ? `file:${focusedRow.dataset.fileId}` : `folder:${focusedRow.dataset.folderPath}`)
+    : '';
   fileListContainer.innerHTML = '';
+  fileListContainer.setAttribute('role', 'tree');
+  fileListContainer.setAttribute('aria-label', t('explorer_title'));
+  if (!fileListContainer.dataset.keyboardReady) {
+    fileListContainer.dataset.keyboardReady = 'true';
+    fileListContainer.addEventListener('keydown', handleExplorerKeydown);
+  }
   activeExplorerDropElement = null;
   fileListContainer.classList.remove('drop-inside');
 
@@ -529,7 +545,76 @@ function renderFileExplorer() {
   fileListContainer.appendChild(fragment);
   scheduleLucideIcons();
 
+  // Exactly one row is reachable with Tab; arrows move between rows and
+  // F2/Delete reach the row actions without a tab stop per button.
+  fileListContainer.querySelectorAll('button').forEach(button => { button.tabIndex = -1; });
+  const rows =Array.from(fileListContainer.querySelectorAll('.file-item, .folder-item'));
+  const rowToFocus = focusedKey
+    ? rows.find(row => (focusedKey.startsWith('file:') ? `file:${row.dataset.fileId}` : `folder:${row.dataset.folderPath}`) === focusedKey)
+    : null;
+  const tabStop = rowToFocus || fileListContainer.querySelector('.file-item.active') || rows[0];
+  if (tabStop) tabStop.tabIndex = 0;
+  rowToFocus?.focus({ preventScroll: true });
+
   fileListContainer.scrollTop = savedScrollTop;
+}
+
+function handleExplorerKeydown(event) {
+  const row = event.target.closest?.('.file-item, .folder-item');
+  if (!row || event.target !== row) return;
+  const rows = Array.from(event.currentTarget.querySelectorAll('.file-item, .folder-item'));
+  const index = rows.indexOf(row);
+  const focusRow = nextRow => {
+    if (!nextRow) return;
+    rows.forEach(item => { item.tabIndex = -1; });
+    nextRow.tabIndex = 0;
+    nextRow.focus();
+  };
+  const isFolder = row.classList.contains('folder-item');
+  const folderPath = row.dataset.folderPath;
+  const file = isFolder ? null : files.find(item => item.id === row.dataset.fileId);
+
+  switch (event.key) {
+    case 'ArrowDown':
+      focusRow(rows[index + 1]);
+      break;
+    case 'ArrowUp':
+      focusRow(rows[index - 1]);
+      break;
+    case 'Home':
+      focusRow(rows[0]);
+      break;
+    case 'End':
+      focusRow(rows[rows.length - 1]);
+      break;
+    case 'ArrowRight':
+    case 'ArrowLeft': {
+      if (!isFolder) return;
+      const collapse = event.key === 'ArrowLeft';
+      if (collapsedFolders.has(folderPath) === collapse) return;
+      if (collapse) collapsedFolders.add(folderPath);
+      else collapsedFolders.delete(folderPath);
+      renderFileExplorer();
+      break;
+    }
+    case 'Enter':
+    case ' ':
+      if (isFolder) {
+        row.click();
+      } else if (file) {
+        openFile(file.id);
+      }
+      break;
+    case 'F2':
+      row.querySelector('.file-item-btn[data-action="rename"], .folder-item-btn[data-action="rename"]')?.click();
+      break;
+    case 'Delete':
+      row.querySelector('[data-action="delete"]')?.click();
+      break;
+    default:
+      return;
+  }
+  event.preventDefault();
 }
 
 // Recursively render tree children
@@ -553,6 +638,11 @@ function renderTreeChildren(parentNode, container, depth) {
       const folderDiv = document.createElement('div');
       folderDiv.className = 'folder-item';
       folderDiv.dataset.folderPath = node.path;
+      folderDiv.tabIndex = -1;
+      folderDiv.setAttribute('role', 'treeitem');
+      folderDiv.setAttribute('aria-level', String(depth + 1));
+      folderDiv.setAttribute('aria-expanded', String(!isCollapsed));
+      folderDiv.setAttribute('aria-label', node.name);
 
       const infoDiv = document.createElement('div');
       infoDiv.className = 'folder-item-info';
@@ -600,6 +690,7 @@ function renderTreeChildren(parentNode, container, depth) {
       const renameBtn = document.createElement('button');
       renameBtn.className = 'folder-item-btn';
       renameBtn.title = t('rename');
+      renameBtn.dataset.action = 'rename';
       renameBtn.setAttribute('aria-label', t('rename_folder'));
       renameBtn.innerHTML = '<i data-lucide="edit-2"></i>';
       renameBtn.addEventListener('click', (e) => {
@@ -613,6 +704,7 @@ function renderTreeChildren(parentNode, container, depth) {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'folder-item-btn';
         deleteBtn.title = t('delete');
+        deleteBtn.dataset.action = 'delete';
         deleteBtn.setAttribute('aria-label', t('delete_folder'));
         deleteBtn.innerHTML = '<i data-lucide="trash"></i>';
         deleteBtn.addEventListener('click', (e) => {
@@ -666,7 +758,6 @@ function renderTreeChildren(parentNode, container, depth) {
         }
 
         const targetFolder = position === 'inside' ? node.path : getParentPath(node.path);
-        const targetName = position === 'inside' ? node.name : (getParentPath(node.path).split('/').filter(Boolean).pop() || 'raíz');
 
         if (position === 'inside') collapsedFolders.delete(node.path);
         if (typeof showDragDropLoading === 'function') showDragDropLoading(currentLocale === 'es' ? 'Añadiendo archivos...' : 'Adding files...');
@@ -726,6 +817,11 @@ function renderTreeChildren(parentNode, container, depth) {
       const fileDiv = document.createElement('div');
       fileDiv.className = `file-item ${isActive ? 'active' : ''}`;
       fileDiv.dataset.fileId = file.id;
+      fileDiv.tabIndex = -1;
+      fileDiv.setAttribute('role', 'treeitem');
+      fileDiv.setAttribute('aria-level', String(depth + 1));
+      fileDiv.setAttribute('aria-selected', String(isActive));
+      fileDiv.setAttribute('aria-label', node.name);
 
       const infoDiv = document.createElement('div');
       infoDiv.className = 'file-item-info';
@@ -752,6 +848,7 @@ function renderTreeChildren(parentNode, container, depth) {
       const renameBtn = document.createElement('button');
       renameBtn.className = 'file-item-btn';
       renameBtn.title = t('rename');
+      renameBtn.dataset.action = 'rename';
       renameBtn.setAttribute('aria-label', t('rename_file'));
       renameBtn.innerHTML = '<i data-lucide="edit-2"></i>';
       renameBtn.addEventListener('click', (e) => {
@@ -763,6 +860,7 @@ function renderTreeChildren(parentNode, container, depth) {
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'file-item-btn';
       deleteBtn.title = t('delete');
+      deleteBtn.dataset.action = 'delete';
       deleteBtn.setAttribute('aria-label', t('delete_file'));
       deleteBtn.innerHTML = '<i data-lucide="trash"></i>';
       deleteBtn.addEventListener('click', (e) => {
@@ -886,8 +984,7 @@ function createNewFolder(parentPath = '') {
     folderName = parentPath + baseName + '/';
   }
 
-  const fileId = 'folder-' + String(Date.now());
-  const newFolder = createFolderRecord(folderName, { id: fileId });
+  const newFolder = createFolderRecord(folderName);
 
   files.push(newFolder);
 
@@ -1055,7 +1152,7 @@ function deleteFolder(folderPath) {
   collapsedFolders.delete(folderPath);
   cleanupVirtualBlobUrlCache();
 
-  showToast(t('toast_folder_deleted', { name: folderName }));
+  showUndoableToast(t('toast_folder_deleted', { name: folderName }));
   renderFileExplorer();
   renderActiveFileSummary();
   updateFileNameExtension();
@@ -1079,8 +1176,8 @@ function createNewFile(parentPath = '') {
     fullName = parentPath + baseName;
   }
 
-  const fileId = String(Date.now());
-  const newFile = createTextFileRecord(fullName, '', { id: fileId });
+  const newFile = createTextFileRecord(fullName, '');
+  const fileId = newFile.id;
   files.push(newFile);
 
   if (monacoLoaded) createModelForFile(newFile);
@@ -1131,7 +1228,7 @@ function deleteFile(fileId) {
   }
   cleanupVirtualBlobUrlCache();
 
-  showToast(t('toast_file_deleted', { name: deletedFileName.split('/').pop() }));
+  showUndoableToast(t('toast_file_deleted', { name: deletedFileName.split('/').pop() }));
   renderFileExplorer();
   renderActiveFileSummary();
   updateFileNameExtension();

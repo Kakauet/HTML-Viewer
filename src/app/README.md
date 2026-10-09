@@ -8,7 +8,8 @@ run `node build.mjs` to regenerate and fingerprint the served bundle.
 - `02-file-path-records.js`: path normalization, MIME helpers, file records.
 - `03-project-preview-service-worker.js`: project preview service worker sync.
 - `04-models-entry-utils.js`: Monaco models, entry file selection, small UI helpers.
-- `05-reference-resolution.js`: HTML/CSS reference rewriting.
+- `05-reference-resolution.js`: Simple-mode reference rewriting and injection of the preview runtime.
+- `05b-preview-runtime.js`: runtime script injected into every previewed HTML document, plus its editor-side helpers (storage namespaces, pruning).
 - `06-virtual-assets.js`: Blob/Data URL snapshots and asset URL caches.
 - `07-preview-editor.js`: preview rendering and editor bootstrapping.
 - `08-layout-preview-controls.js`: split layout and preview toolbar controls.
@@ -30,6 +31,9 @@ run `node build.mjs` to regenerate and fingerprint the served bundle.
 - A render may commit only while its generation and project-session generation
   are current. Service-worker versions are issued monotonically and become
   visible only after the current request is acknowledged.
+- `Simple` documents run in a sandbox without the editor's origin, so they
+  cannot reach the editor's DOM or storage; a Simple document that uses editor
+  Blob URLs keeps the editor origin instead (see `setPreviewFrameIsolation`).
 - `Archivos` syncs a virtual project to `preview-sw.js` under the scoped
   `__html_viewer_project__/` URL beneath the app's deployment path; the main application must never be controlled
   by that service worker.
@@ -40,11 +44,25 @@ run `node build.mjs` to regenerate and fingerprint the served bundle.
   clean routes, root-relative assets, query strings, local `_redirects` rules
   and extensionless SPA fallbacks while leaving cross-origin requests on the
   network.
-- Full-page windows and nested frames resolve local navigation inside the same
-  project namespace, including clean routes, authored `<base>` URLs, dynamic
-  links/frames, GET forms, query parameters and fragments. Directory indexes
-  keep their trailing slash so relative requests work after navigation/reload.
-- Preview instrumentation must not replace browser APIs such as `fetch`, XHR or
-  element focus, nor suppress interactions inside the rendered application.
+- Project files are served verbatim; nothing is rewritten. A page sees its
+  published URL (`/servicios/`, `/#contacto`), because the runtime
+  `replaceState`s away from the worker URL. Requests the project cannot answer
+  are 404s from the project, never the editor's own files.
+- The runtime (`htmlViewerPreviewRuntime`) is the only code injected into
+  previewed pages. It maps links, forms, frames, `window.open` and
+  `location.assign` to the project, scopes `localStorage`, `sessionStorage`,
+  cookies, IndexedDB and CacheStorage to the project's namespace (pruned after
+  7 days), stubs `navigator.serviceWorker`, and reports diagnostics and
+  location over the `html-viewer-preview-diagnostic` / `-control` channels.
+  It must not replace `fetch`, XHR or focus, nor suppress interactions.
+- A reload or history traversal onto a published URL is not in the worker's
+  scope: the runtime asks the editor to reload the page from the project, and
+  the out-of-scope guard in the shell and `404.html` does the same for
+  traversals that reach the network (`recover` navigations replace, link
+  navigations push a history entry so `history.back()` works).
+- Full page opens `preview.html`: a sandboxed host that frames the project
+  session (`?session=&root=#/route`, history kept in the host's hash), or, for
+  Simple documents, receives the document by `postMessage` and renders it in an
+  opaque frame. The host drops `window.opener`.
 - Browser preference storage is optional. The editor must still start when
   `localStorage` is unavailable or blocked.

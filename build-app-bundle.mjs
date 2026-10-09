@@ -11,6 +11,7 @@ const sourceFiles = [
   'src/app/03-project-preview-service-worker.js',
   'src/app/04-models-entry-utils.js',
   'src/app/05-reference-resolution.js',
+  'src/app/05b-preview-runtime.js',
   'src/app/06-virtual-assets.js',
   'src/app/07-preview-editor.js',
   'src/app/08-layout-preview-controls.js',

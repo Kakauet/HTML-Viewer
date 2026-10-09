@@ -2,6 +2,7 @@
 <html lang="{{lang}}" data-theme="dark" class="editor-page">
 <head>
   <meta charset="utf-8">
+  {{previewGuard}}
   {{head}}
   <script>
     (() => {
@@ -100,7 +101,6 @@
         <i data-lucide="menu"></i>
       </button>
       <div class="mobile-brand">HTML Viewer</div>
-      <button id="btn-mobile-help" class="mobile-help-link" aria-label="{{help}}">?</button>
       <div class="mobile-tabs">
         <button class="mobile-tab-btn active" data-tab="editor">
           <i data-lucide="code-2"></i>
@@ -169,7 +169,6 @@
           </span>
         </button>
         <div class="sidebar-links">
-          <a href="https://github.com/Kakauet/HTML-Viewer" rel="external">GitHub</a>
           {{languageLink}}
         </div>
       </div>
@@ -230,7 +229,7 @@
             <div class="file-explorer" id="file-explorer" style="display: none;">
               <div class="file-explorer-header">
                 <div class="file-explorer-heading">
-                  <span data-i18n="choose_file">Elegir archivo</span>
+                  <span data-i18n="explorer_title">Explorador</span>
                 </div>
                 <div class="file-explorer-actions" style="display: flex; gap: 4px;">
                   <button class="file-explorer-btn" id="btn-upload-asset" data-i18n-title="upload_files" data-i18n-aria-label="upload_files" title="Subir archivos" aria-label="Subir archivos">
@@ -297,7 +296,7 @@
             <div class="panel-title panel-title--icon">
               <i data-lucide="eye"></i>
             </div>
-            <div id="preview-status" class="preview-status" role="status" aria-live="polite">Listo</div>
+            <div id="preview-status" class="preview-status" role="status" aria-live="polite" data-i18n="preview_ready">Listo</div>
 
             <!-- Responsive sizes controls -->
           <div class="preview-header-actions" id="preview-header-actions">
@@ -307,7 +306,7 @@
             <button class="preview-reload-btn" id="btn-preview-reload" data-i18n-title="emulator_reload" data-i18n-aria-label="emulator_reload" title="Recargar previsualización" aria-label="Recargar previsualización">
               <i data-lucide="rotate-cw"></i>
             </button>
-            <button class="preview-reload-btn preview-console-btn" id="btn-preview-console" title="Consola de diagnóstico" aria-label="Abrir consola de diagnóstico" aria-expanded="false">
+            <button class="preview-reload-btn preview-console-btn" id="btn-preview-console" data-i18n-title="console_open" data-i18n-aria-label="console_open" title="Abrir consola de diagnóstico" aria-label="Abrir consola de diagnóstico" aria-controls="preview-console" aria-expanded="false">
               <i data-lucide="terminal-square"></i>
               <span class="preview-console-badge" id="preview-console-badge" hidden>0</span>
             </button>
@@ -342,19 +341,19 @@
                 isolation would require serving the preview from a dedicated
                 subdomain (an infra change, not configurable here).
               -->
-              <iframe id="preview-iframe" class="preview-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation"></iframe>
+              <iframe id="preview-iframe" class="preview-iframe" data-html-viewer-preview sandbox="{{previewSandbox}}" allow="{{previewAllow}}"></iframe>
             </div>
-            <section class="preview-console" id="preview-console" aria-label="Consola de diagnóstico" hidden>
-              <div class="preview-console-resizer" id="preview-console-resizer" role="separator" aria-label="Cambiar altura de la consola" aria-orientation="horizontal" tabindex="0"><span></span></div>
+            <section class="preview-console" id="preview-console" data-i18n-aria-label="console_title" aria-label="Diagnóstico" hidden>
+              <div class="preview-console-resizer" id="preview-console-resizer" role="separator" data-i18n-aria-label="console_resize" aria-label="Cambiar la altura de la consola" aria-orientation="horizontal" tabindex="0"><span></span></div>
               <header class="preview-console-header">
-                <div class="preview-console-title"><i data-lucide="terminal-square"></i><span>Diagnóstico</span><span class="preview-console-summary" id="preview-console-summary">Sin problemas</span></div>
+                <div class="preview-console-title"><i data-lucide="terminal-square"></i><span data-i18n="console_title">Diagnóstico</span><span class="preview-console-summary" id="preview-console-summary" data-i18n="console_none">Sin problemas</span></div>
                 <div class="preview-console-actions">
-                  <button type="button" id="btn-preview-console-clear">Limpiar</button>
-                  <button type="button" id="btn-preview-console-close" aria-label="Cerrar consola"><i data-lucide="x"></i></button>
+                  <button type="button" id="btn-preview-console-clear" data-i18n="console_clear">Limpiar</button>
+                  <button type="button" id="btn-preview-console-close" data-i18n-title="console_close" data-i18n-aria-label="console_close" title="Cerrar consola" aria-label="Cerrar consola"><i data-lucide="x"></i></button>
                 </div>
               </header>
-              <div class="preview-console-filters" id="preview-console-filters">
-                <button type="button" class="active" data-diagnostic-filter="all">Todos</button><button type="button" data-diagnostic-filter="error">JS</button><button type="button" data-diagnostic-filter="resource">Recursos</button><button type="button" data-diagnostic-filter="route">Rutas</button><button type="button" data-diagnostic-filter="cors">CORS/red</button>
+              <div class="preview-console-filters" id="preview-console-filters" role="toolbar" data-i18n-aria-label="console_filters" aria-label="Filtrar diagnósticos">
+                <button type="button" class="active" aria-pressed="true" data-diagnostic-filter="all" data-i18n="console_filter_all">Todos</button><button type="button" aria-pressed="false" data-diagnostic-filter="error">JS</button><button type="button" aria-pressed="false" data-diagnostic-filter="resource" data-i18n="console_filter_resource">Recursos</button><button type="button" aria-pressed="false" data-diagnostic-filter="route" data-i18n="console_filter_route">Rutas</button><button type="button" aria-pressed="false" data-diagnostic-filter="cors" data-i18n="console_filter_cors">CORS/red</button>
               </div>
               <div class="preview-console-list" id="preview-console-list" role="log" aria-live="polite"></div>
             </section>
@@ -382,17 +381,17 @@
   </div>
 
   <!-- Modal Exportar -->
-  <div class="modal-overlay" id="modal-export" style="display: none;">
+  <div class="modal-overlay" id="modal-export" role="dialog" aria-modal="true" aria-labelledby="export-title" style="display: none;">
     <div class="modal-card">
       <header class="modal-header">
         <div class="modal-title-group">
           <i data-lucide="file-down" class="modal-title-icon"></i>
           <div>
-            <h3 data-i18n="export_title">Exportar Proyecto</h3>
+            <h3 id="export-title" data-i18n="export_title">Exportar Proyecto</h3>
             <p data-i18n="export_subtitle">Elige el formato de salida para guardar tu código</p>
           </div>
         </div>
-        <button class="modal-close-btn" id="modal-export-close" data-i18n-aria-label="mobile_close_menu" aria-label="Cerrar modal">
+        <button class="modal-close-btn" id="modal-export-close" data-i18n-aria-label="close_dialog" aria-label="Cerrar">
           <i data-lucide="x"></i>
         </button>
       </header>
@@ -437,7 +436,7 @@
     <div class="about-panel-content">
       <header class="about-panel-header">
         <h2 id="help-title" data-i18n="about_title">Help</h2>
-        <button class="about-close-btn" id="about-close-btn" data-i18n-aria-label="mobile_close_menu" aria-label="Close">
+        <button class="about-close-btn" id="about-close-btn" data-i18n-aria-label="close_dialog" aria-label="Close">
           <i data-lucide="x"></i>
         </button>
       </header>

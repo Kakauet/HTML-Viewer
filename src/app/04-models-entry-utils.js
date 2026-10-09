@@ -163,7 +163,7 @@ async function createRecordFromBrowserFile(file, targetPath = '') {
   const uniquePath = getUniquePath(desiredPath);
 
   if (shouldReadFileAsText(file)) {
-    return createTextFileRecord(uniquePath, await file.text(), {
+    return createTextFileRecord(uniquePath, await readTextFile(file), {
       mimeType: file.type || getMimeTypeForFilename(uniquePath),
       size: file.size
     });

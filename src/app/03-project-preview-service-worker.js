@@ -160,108 +160,25 @@ function postProjectPreviewMessage(message, transfer = []) {
   });
 }
 
-function resolveProjectPreviewHtml(content, filename, resourceVersion = null) {
-  const documentUrl = getProjectPreviewUrl(filename);
-  const rootUrl = getProjectPreviewUrl(`${getProjectPreviewSiteRootPath()}/`);
-  let baseUrl = documentUrl;
-  let foundBase = false;
-  const resolveUrl = (value, base) => {
-    const reference = String(value || '').trim();
-    if (!reference || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(reference)) return null;
-    try {
-      return reference.startsWith('/') && new URL(base).origin === location.origin
-        ? new URL(reference.slice(1), rootUrl)
-        : new URL(reference, base);
-    } catch { return null; }
-  };
-  // Honor the first authored base, including for references before that tag.
-  rewriteHtmlReferenceAttributes(content, (value, context) => {
-    if (!foundBase && context?.tagName === 'base' && context.attrName === 'href') {
-      foundBase = true;
-      try { baseUrl = resolveUrl(value, documentUrl)?.href || new URL(value, documentUrl).href; }
-      catch { baseUrl = documentUrl; }
-    }
-    return null;
-  });
-  return rewriteHtmlReferenceAttributes(content, (value, context) => {
-    const url = resolveUrl(value, context?.tagName === 'base' ? documentUrl : baseUrl);
-    if (!url || url.origin !== location.origin) return null;
-    if (context?.tagName !== 'base' && resourceVersion !== null) {
-      url.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(resourceVersion));
-    }
-    return url.href;
-  });
-}
-
-function createProjectPreviewNavigationBridge() {
-  const rootUrl = JSON.stringify(getProjectPreviewUrl(`${getProjectPreviewSiteRootPath()}/`)).replace(/</g, '\\u003c');
-  const sessionRoot = JSON.stringify(getProjectPreviewUrl('/')).replace(/</g, '\\u003c');
-  return `<script data-html-viewer-project-navigation>
-(() => {
-  const root = new URL(${rootUrl});
-  const sessionRoot = new URL(${sessionRoot});
-  const attributes = { A: 'href', AREA: 'href', FORM: 'action', BUTTON: 'formaction', INPUT: 'formaction', IFRAME: 'src', FRAME: 'src', BASE: 'href', OBJECT: 'data', EMBED: 'src' };
-  const rewrite = element => {
-    const attribute = attributes[element.tagName];
-    if (!attribute) return;
-    const value = (element.getAttribute(attribute) || '').trim();
-    if (!value || value.startsWith('//')) return;
-    try {
-      const url = new URL(value, document.baseURI);
-      if (url.origin !== root.origin || url.pathname.startsWith(sessionRoot.pathname)) return;
-      if (!value.startsWith('/') && !/^https?:/i.test(value)) return;
-      const target = new URL(url.pathname.slice(1), root);
-      target.search = url.search;
-      target.hash = url.hash;
-      if (target.href !== url.href) element.setAttribute(attribute, target.href);
-    } catch {}
-  };
-  const scan = node => {
-    if (node.nodeType !== 1) return;
-    rewrite(node);
-    node.querySelectorAll('a[href],area[href],form[action],button[formaction],input[formaction],iframe[src],frame[src],base[href],object[data],embed[src]').forEach(rewrite);
-  };
-  new MutationObserver(records => {
-    for (const record of records) {
-      if (record.type === 'attributes') rewrite(record.target);
-      else record.addedNodes.forEach(scan);
-    }
-  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['href', 'src', 'action', 'formaction', 'data'] });
-  for (const type of ['pointerdown', 'click', 'auxclick']) {
-    document.addEventListener(type, event => {
-      const link = event.composedPath().find(node => node?.matches?.('a[href],area[href]'));
-      if (link) rewrite(link);
-    }, true);
-  }
-  document.addEventListener('submit', event => {
-    rewrite(event.target);
-    if (event.submitter) rewrite(event.submitter);
-  }, true);
-  scan(document.documentElement);
-})();
-</script>`;
-}
-
-function createProjectPreviewEntry(file, resolver, renderToken = '') {
+function createProjectPreviewEntry(file, renderToken = '') {
   if (!file || file.isFolder) return null;
   const cleanPath = normalizeProjectPath(file.name);
   if (!cleanPath) return null;
 
   const ext = getFileExtension(cleanPath);
   const isHtml = ext === 'html' || ext === 'htm';
-  const isCss = ext === 'css';
-  const rawContent = file.isBinary ? null : getFileText(file);
+  // Files are served exactly as authored: the page runs at its own clean URL,
+  // so relative and root-relative references resolve like on a real host.
+  // HTML only gains the preview runtime as its first script.
   let content = null;
   if (!file.isBinary) {
+    content = getFileText(file);
     if (isHtml) {
-      content = applyNonDraggableImageGuard(
-        injectPreviewGuardIntoHtml(resolveProjectPreviewHtml(rawContent, cleanPath, renderToken), '', createProjectPreviewNavigationBridge()),
-        { preventPreviewFocus: previewBlockFocusForCurrentRender, renderToken }
-      );
-    } else if (isCss) {
-      content = resolveCssUrlsLazy(rawContent, cleanPath, resolver);
-    } else {
-      content = rawContent;
+      content = applyNonDraggableImageGuard(content, {
+        preventPreviewFocus: previewBlockFocusForCurrentRender,
+        renderToken,
+        mode: 'project'
+      });
     }
   }
 
@@ -279,20 +196,10 @@ async function collectProjectPreviewEntries(paths = null, resourceVersion = null
   const entries = [];
   let processed = 0;
   const fileLookup = createProjectFileLookup();
-  const resolver = (canonicalPath) => {
-    const cleanPath = normalizeProjectPath(canonicalPath);
-    // A root-relative reference can produce two candidates: the workspace
-    // path and the site's common root. Only resolve the candidate that really
-    // exists; otherwise `/nested/page.html` would silently point outside a
-    // project rooted at `proyecto/`.
-    return cleanPath && fileLookup.has(cleanPath.toLowerCase())
-      ? getProjectPreviewUrl(cleanPath, resourceVersion)
-      : null;
-  };
 
   if (selectedPaths) {
     for (const cleanPath of selectedPaths) {
-      const entry = createProjectPreviewEntry(fileLookup.get(cleanPath.toLowerCase()), resolver, resourceVersion);
+      const entry = createProjectPreviewEntry(fileLookup.get(cleanPath.toLowerCase()), resourceVersion);
       if (entry) entries.push(entry);
       processed += 1;
       if (processed % 80 === 0) {
@@ -303,7 +210,7 @@ async function collectProjectPreviewEntries(paths = null, resourceVersion = null
   }
 
   for (const file of files) {
-    const entry = createProjectPreviewEntry(file, resolver, resourceVersion);
+    const entry = createProjectPreviewEntry(file, resourceVersion);
     if (!entry) continue;
     entries.push(entry);
 
@@ -345,10 +252,60 @@ function getProjectPreviewPathFromUrl(urlValue) {
   }
 }
 
+// A page served by the preview worker shows its published URL
+// (`/servicios/x`); everything else in the editor reasons about the worker
+// URL that served it. Only primitive values are read from the page.
+function readPreviewRuntimeInfo(previewWindow) {
+  try {
+    const info = previewWindow?.__htmlViewerPreview;
+    if (!info || info.session !== projectPreviewSessionId) return null;
+    const fields = ['siteRoot', 'version', 'sourceHref', 'prettyPathname'];
+    if (!fields.every(field => typeof info[field] === 'string')) return null;
+    return { siteRoot: info.siteRoot, version: info.version, sourceHref: info.sourceHref, prettyPathname: info.prettyPathname };
+  } catch {
+    return null;
+  }
+}
+
+// Project path for a published-style (root-relative) URL path.
+function getProjectPathFromSitePathname(pathname, siteRoot = getProjectPreviewSiteRootPath()) {
+  const decoded = decodeUrlPathComponent(pathname);
+  return normalizeProjectPath(siteRoot ? `${siteRoot}/${decoded}` : decoded, { folder: decoded.endsWith('/') });
+}
+
+function getProjectPreviewUrlForSiteUrl(urlValue, version = null, siteRoot = getProjectPreviewSiteRootPath()) {
+  const url = new URL(urlValue, location.href);
+  const target = new URL(getProjectPreviewUrl(getProjectPathFromSitePathname(url.pathname, siteRoot) || `${siteRoot}/`));
+  target.search = url.search;
+  target.hash = url.hash;
+  if (version !== null && version !== undefined && version !== '') {
+    target.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(version));
+  }
+  return target.href;
+}
+
 function getPreviewIframeUrl() {
   if (!previewIframe) return '';
   try {
-    return previewIframe.contentWindow?.location?.href || previewIframe.src || '';
+    const previewWindow = previewIframe.contentWindow;
+    const href = previewWindow?.location?.href || '';
+    const info = href && readPreviewRuntimeInfo(previewWindow);
+    if (info?.prettyPathname) {
+      const current = new URL(href);
+      if (current.origin === location.origin && !getProjectPreviewPathFromUrl(current.href)) {
+        if (current.pathname === info.prettyPathname) {
+          // Same page as served: keep the exact worker URL (`index.html`).
+          const source = new URL(info.sourceHref);
+          source.search = current.search;
+          source.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, info.version);
+          source.hash = current.hash;
+          return source.href;
+        }
+        // The page changed its own route (pushState).
+        return getProjectPreviewUrlForSiteUrl(current.href, info.version, info.siteRoot);
+      }
+    }
+    return href || previewIframe.src || '';
   } catch {
     return previewIframe.src || '';
   }
@@ -362,7 +319,7 @@ function setProjectPreviewLocation(urlValue, fallbackPath = '') {
     const url = new URL(urlValue, location.href);
     path = getProjectPreviewPathFromUrl(url.href) || path;
     if (!path && previewLifecycle.mode === 'project' && url.origin === location.origin) {
-      path = normalizeProjectPath(url.pathname);
+      path = getProjectPathFromSitePathname(url.pathname);
     }
     search = url.search;
     hash = url.hash;
@@ -379,6 +336,30 @@ function resetProjectPreviewLocation() {
   previewLifecycle.projectPath = '';
   previewLifecycle.projectSearch = '';
   previewLifecycle.projectHash = '';
+}
+
+// `dist/index.html`, `dist/` and `dist` are all the entry page.
+function isEntryProjectPreviewPath(path) {
+  const entryFile = getEntryFile();
+  const cleanPath = normalizeProjectPath(path);
+  if (!entryFile || !cleanPath) return false;
+  if (cleanPath.toLowerCase() === normalizeProjectPath(entryFile.name).toLowerCase()) return true;
+  return findProjectFileByStaticRoute(cleanPath)?.id === entryFile.id && !/\.[^/.]+$/.test(cleanPath.split('/').pop() || '');
+}
+
+// The route the page would have when published, e.g. `/servicios/tasaciones`.
+function getProjectPreviewSiteRoute(path) {
+  const cleanPath = normalizeProjectPath(path);
+  const siteRoot = getProjectPreviewSiteRootPath();
+  const inSite = siteRoot && cleanPath.toLowerCase().startsWith(`${siteRoot.toLowerCase()}/`)
+    ? cleanPath.slice(siteRoot.length + 1)
+    : (cleanPath.toLowerCase() === siteRoot.toLowerCase() ? '' : cleanPath);
+  return `/${inSite.replace(/(^|\/)index\.html?$/i, '$1')}`;
+}
+
+function getPreviewSitePathLabel(path) {
+  const route = getProjectPreviewSiteRoute(path);
+  return route.length > 42 ? `…${route.slice(-41)}` : route;
 }
 
 function getCompactPreviewPath(path) {
@@ -412,12 +393,14 @@ function syncProjectPreviewNavigationState({ preferExpected = true } = {}) {
   }
 
   const currentUrl = getPreviewIframeUrl();
+  // A frame that is between documents has no location of its own yet.
+  if (!currentUrl) return false;
   let currentPath = getProjectPreviewPathFromUrl(currentUrl);
   if (!currentPath && previewLifecycle.mode === 'project') {
     try {
       const url = new URL(currentUrl, location.href);
       if (url.origin === location.origin) {
-        currentPath = normalizeProjectPath(url.pathname);
+        currentPath = getProjectPathFromSitePathname(url.pathname);
       }
     } catch {}
   }
@@ -432,10 +415,9 @@ function syncProjectPreviewNavigationState({ preferExpected = true } = {}) {
   } else {
     projectPreviewMissingPath = '';
     projectPreviewNotifiedMissingPath = '';
-    const entryPath = normalizeProjectPath(getEntryFile()?.name || '');
-    const label = currentPath.toLowerCase() === entryPath.toLowerCase()
+    const label = isEntryProjectPreviewPath(currentPath)
       ? PREVIEW_READY_LABEL
-      : `Viendo: ${getCompactPreviewPath(currentPath)}`;
+      : `${t('preview_viewing')}: ${getPreviewSitePathLabel(currentPath)}`;
     setPreviewStatus(label, 'ready');
   }
 

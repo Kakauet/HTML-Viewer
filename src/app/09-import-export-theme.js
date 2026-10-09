@@ -1,7 +1,17 @@
 // --- Modal & Project Import/Export Helpers ---
+let modalReturnFocus = null;
+
+function getModalFocusableElements(modal) {
+  return Array.from(modal.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])'))
+    .filter(element => !element.disabled && element.offsetParent !== null);
+}
+
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
+  modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
   modal.style.display = 'flex';
   modal.offsetHeight; // Force reflow
   modal.classList.add('active');
@@ -25,12 +35,22 @@ function openModal(modalId) {
       }
     }
   }
+
+  const [firstFocusable] = getModalFocusableElements(modal.querySelector('.modal-body') || modal);
+  (firstFocusable || modal.querySelector('.modal-close-btn'))?.focus({ preventScroll: true });
 }
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (!modal) return;
+  if (!modal || !modal.classList.contains('active')) return;
   modal.classList.remove('active');
+  const returnFocus = modalReturnFocus;
+  modalReturnFocus = null;
+  if (returnFocus?.isConnected && !returnFocus.closest('[inert]')) {
+    returnFocus.focus({ preventScroll: true });
+  } else if (monacoLoaded && editor) {
+    editor.focus();
+  }
   setTimeout(() => {
     if (!modal.classList.contains('active')) {
       modal.style.display = 'none';
@@ -54,6 +74,28 @@ function initModalCloseEvents() {
       closeModal('modal-export');
     });
   }
+
+  modal.addEventListener('keydown', (event) => {
+    if (!modal.classList.contains('active')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeModal('modal-export');
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = getModalFocusableElements(modal);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 }
 
 function startImportOperation() {
@@ -288,7 +330,7 @@ async function exportToZip() {
   try {
     JSZipCtor = await ensureJSZip();
   } catch (err) {
-    if (token === importGeneration) showToast(t('toast_jszip_not_loaded'), 'error');
+    showToast(t('toast_jszip_not_loaded'), 'error');
     return;
   }
 
@@ -308,16 +350,7 @@ async function exportToZip() {
 
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     const fullName = `${folderName}.zip`;
-
-    const downloadUrl = URL.createObjectURL(content);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = fullName;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+    downloadBlob(content, fullName);
     showToast(t('toast_project_exported_zip', { name: fullName }));
     closeModal('modal-export');
   }).catch(function (err) {
@@ -377,7 +410,7 @@ async function exportToFolder() {
 async function importSingleHtmlFile(file, operationToken = null) {
   const token = operationToken ?? startImportOperation();
   try {
-    const html = await file.text();
+    const html = await readTextFile(file);
     if (token !== importGeneration || !editor) return false;
 
     if (!beginProjectReplacement(token)) return false;
@@ -441,7 +474,9 @@ async function importFromZip(zipFile, operationToken = null) {
 
       const fileId = createFileId('file');
       const order = nextFileOrder + fileCounter++;
-      const content = await (isTextFilename(relativePath) ? zipEntry.async('string') : zipEntry.async('blob'));
+      const content = isTextFilename(relativePath)
+        ? decodeTextFileBytes(await zipEntry.async('uint8array'), relativePath)
+        : await zipEntry.async('blob');
       newFiles.push(isTextFilename(relativePath)
         ? createTextFileRecord(relativePath, content, { id: fileId, order })
         : createBinaryFileRecord(relativePath, content, { id: fileId, order, mimeType: getMimeTypeForFilename(relativePath) }));
@@ -897,24 +932,9 @@ function initImportExportOptions() {
       try {
         const code = await compileToUnifiedHTML();
         const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
-        const link = document.createElement('a');
-
-        let filename = filenameInput ? filenameInput.value.trim() : 'index';
-        if (!filename) filename = 'index';
-        if (filename.toLowerCase().endsWith('.html')) {
-          filename = filename.substring(0, filename.length - 5);
-        }
         const suffix = currentLocale === 'es' ? '_unificado.html' : '_unified.html';
-        const fullName = `${filename}${suffix}`;
-
-        const downloadUrl = URL.createObjectURL(blob);
-        link.href = downloadUrl;
-        link.download = fullName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+        const fullName = `${getExportBaseName()}${suffix}`;
+        downloadBlob(blob, fullName);
         showToast(t('toast_unified_html_exported', { name: fullName }));
         closeModal('modal-export');
       } catch (err) {

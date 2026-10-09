@@ -74,14 +74,31 @@ async function getPreviewFrameUrl(page) {
   });
 }
 
-async function waitForPreviewFrameUrlChange(page, previousUrl, timeoutMs = 8000) {
+async function waitForPreviewFrameLocation(page, predicate, timeoutMs = 10000) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    const currentUrl = await getPreviewFrameUrl(page);
-    if (currentUrl && currentUrl !== previousUrl) return currentUrl;
+    const frame = page.frames().find(item => item.parentFrame() === page.mainFrame());
+    if (frame && predicate(frame.url())) return frame.url();
     await page.waitForTimeout(50);
   }
-  assert.fail(`La URL del iframe no cambió desde ${previousUrl}`);
+  assert.fail('La URL del iframe no cumplio la condicion: ' + page.frames().map(item => item.url()).join(', '));
+}
+
+// A previewed page shows its published URL (`/page`); the runtime exposes
+// which session and worker URL it was loaded from.
+async function getPreviewRuntimeInfo(page) {
+  const frame = page.frames().find(item => item.parentFrame() === page.mainFrame());
+  return frame ? frame.evaluate(() => window.__htmlViewerPreview || null).catch(() => null) : null;
+}
+
+async function waitForPreviewSourceChange(page, previousHref, timeoutMs = 8000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const info = await getPreviewRuntimeInfo(page);
+    if (info?.sourceHref && info.sourceHref !== previousHref) return info;
+    await page.waitForTimeout(50);
+  }
+  assert.fail('La previsualizacion no cargo una nueva version de ' + previousHref);
 }
 
 async function openProjectFile(page, filename) {
@@ -385,11 +402,9 @@ test('Simple preserves native APIs, focus, forms, popups and document.write', as
   await popup.close();
 
   await page.frameLocator('#preview-iframe').locator('#submit').click();
-  await page.waitForFunction(() => {
-    const iframe = document.querySelector('#preview-iframe');
-    try { return iframe.contentWindow.location.href.includes('sent=yes'); }
-    catch { return false; }
-  });
+  // Simple documents are sandboxed without the editor's origin: the frame's
+  // location is only visible from outside the page.
+  await waitForPreviewFrameLocation(page, url => url.includes('sent=yes'));
   await page.getByRole('button', { name: /Volver a la p.gina inicial/ }).click();
   await input.waitFor({ state: 'visible', timeout: 10000 });
 
@@ -528,19 +543,11 @@ test('Files supports root paths, base, ES modules, fetch and internal GET forms'
   await page.frameLocator('#preview-iframe').locator('#history-events').filter({ hasText: 'hashchange;' }).waitFor({ state: 'visible' });
   const mainUrlBeforeBrowserBack = page.url();
   await page.evaluate(() => history.back());
-  await page.waitForFunction(() => {
-    const iframe = document.querySelector('#preview-iframe');
-    try { return !iframe.contentWindow.location.hash; }
-    catch { return false; }
-  });
+  await waitForPreviewFrameLocation(page, url => !new URL(url).hash);
   await page.frameLocator('#preview-iframe').locator('#history-events').filter({ hasText: 'popstate;' }).waitFor({ state: 'visible' });
   assert.equal(page.url(), mainUrlBeforeBrowserBack);
   await page.evaluate(() => history.back());
-  await page.waitForFunction(() => {
-    const iframe = document.querySelector('#preview-iframe');
-    try { return /index\.html/.test(iframe.contentWindow.location.pathname); }
-    catch { return false; }
-  });
+  await waitForPreviewFrameLocation(page, url => new URL(url).pathname === '/');
   assert.equal(page.url(), mainUrlBeforeBrowserBack);
   assert.equal(await page.locator('#preview-iframe').count(), 1);
 
@@ -552,8 +559,7 @@ test('Files supports root paths, base, ES modules, fetch and internal GET forms'
   });
   await waitForPreviewVersion(page, 'FILES-SPA-LATEST');
   const spaUrl = await getPreviewFrameUrl(page);
-  assert.match(spaUrl, /__html_viewer_project__\//);
-  assert.match(spaUrl, /dashboard/);
+  assert.equal(new URL(spaUrl).pathname, '/dashboard');
 
   await page.getByRole('button', { name: /Volver a la p.gina inicial/ }).click();
   await waitForPreviewVersion(page, 'FILES-SPA-LATEST');
@@ -561,7 +567,7 @@ test('Files supports root paths, base, ES modules, fetch and internal GET forms'
   await page.frameLocator('#preview-iframe').locator('#root-link').click();
   await waitForPreviewVersion(page, 'NESTED-READY');
   const rootLinkUrl = await getPreviewFrameUrl(page);
-  assert.match(rootLinkUrl, /__html_viewer_project__\//);
+  assert.equal(new URL(rootLinkUrl).pathname, '/nested/page.html');
   assert.equal(new URL(rootLinkUrl).searchParams.get('v'), 'user');
 
   await page.getByRole('button', { name: /Volver a la p.gina inicial/ }).click();
@@ -569,7 +575,7 @@ test('Files supports root paths, base, ES modules, fetch and internal GET forms'
   await page.frameLocator('#preview-iframe').locator('#form-submit').click();
   await waitForPreviewVersion(page, 'NESTED-READY');
   const formUrl = await getPreviewFrameUrl(page);
-  assert.match(formUrl, /__html_viewer_project__\//);
+  assert.equal(new URL(formUrl).pathname, '/nested/page.html');
   assert.match(formUrl, /from=form/);
   assert.deepEqual(pageErrors, []);
   await page.close();
@@ -614,58 +620,63 @@ test('página completa conserva rutas limpias, iframes anidados, ventanas y form
   const popup = await popupPromise;
   const errors = [];
   popup.on('pageerror', error => errors.push(error.message));
-  await popup.waitForURL(/__html_viewer_project__/);
-  await popup.locator('#module').filter({ hasText: 'MODULE:FETCH' }).waitFor({ state: 'visible' });
-  assert.equal(await popup.locator('body').evaluate(body => getComputedStyle(body).getPropertyValue('--full-color').trim()), 'rgb(12, 34, 56)');
-  assert.equal(await popup.evaluate(() => /\[native code\]/.test(fetch.toString()) && /\[native code\]/.test(XMLHttpRequest.toString())), true);
-  await popup.frameLocator('#embedded').getByRole('heading', { name: 'FRAME-ONE', exact: true }).waitFor({ state: 'visible' });
-  await popup.frameLocator('#embedded').frameLocator('#deep').getByRole('heading', { name: 'FRAME-TWO', exact: true }).waitFor({ state: 'visible' });
-  await popup.frameLocator('#embedded').locator('#frame-legal').click();
-  await popup.frameLocator('#embedded').getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
-  await popup.frameLocator('#embedded').locator('#back-home').click();
-  await popup.frameLocator('#embedded').getByRole('heading', { name: 'FULL-HOME' }).waitFor({ state: 'visible' });
-  await popup.locator('#send-frame').click();
-  await popup.frameLocator('#embedded').getByRole('heading', { name: 'FRAME-ONE', exact: true }).waitFor({ state: 'visible' });
-  assert.match(await popup.frameLocator('#embedded').locator('body').evaluate(() => location.search), /from=frame/);
-  await popup.locator('#dynamic').click();
-  await popup.frameLocator('#dynamic-frame').getByRole('heading', { name: 'FRAME-TWO' }).waitFor({ state: 'visible' });
-  await popup.locator('#dynamic-link').click();
-  await popup.locator('#added-link').click();
-  await popup.getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
-  await popup.locator('#back-home').click();
-  await popup.locator('#home').waitFor({ state: 'visible' });
+  await popup.waitForURL(/preview\.html/);
+  const view = popup.frameLocator('#preview-frame');
+  const siteFrame = () => popup.frames().find(item => item.parentFrame() === popup.mainFrame());
+  const siteUrl = () => new URL(siteFrame().url());
+  await view.locator('#module').filter({ hasText: 'MODULE:FETCH' }).waitFor({ state: 'visible' });
+  assert.equal(await view.locator('body').evaluate(body => getComputedStyle(body).getPropertyValue('--full-color').trim()), 'rgb(12, 34, 56)');
+  assert.equal(await siteFrame().evaluate(() => /\[native code\]/.test(fetch.toString()) && /\[native code\]/.test(XMLHttpRequest.toString())), true);
+  await view.frameLocator('#embedded').getByRole('heading', { name: 'FRAME-ONE', exact: true }).waitFor({ state: 'visible' });
+  await view.frameLocator('#embedded').frameLocator('#deep').getByRole('heading', { name: 'FRAME-TWO', exact: true }).waitFor({ state: 'visible' });
+  await view.frameLocator('#embedded').locator('#frame-legal').click();
+  await view.frameLocator('#embedded').getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
+  await view.frameLocator('#embedded').locator('#back-home').click();
+  await view.frameLocator('#embedded').getByRole('heading', { name: 'FULL-HOME' }).waitFor({ state: 'visible' });
+  await view.locator('#send-frame').click();
+  await view.frameLocator('#embedded').getByRole('heading', { name: 'FRAME-ONE', exact: true }).waitFor({ state: 'visible' });
+  assert.match(await view.frameLocator('#embedded').locator('body').evaluate(() => location.search), /from=frame/);
+  await view.locator('#dynamic').click();
+  await view.frameLocator('#dynamic-frame').getByRole('heading', { name: 'FRAME-TWO' }).waitFor({ state: 'visible' });
+  await view.locator('#dynamic-link').click();
+  await view.locator('#added-link').click();
+  await view.getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
+  await view.locator('#back-home').click();
+  await view.locator('#home').waitFor({ state: 'visible' });
   const childPromise = popup.waitForEvent('popup');
-  await popup.locator('#new-tab').click();
+  await view.locator('#new-tab').click();
   const child = await childPromise;
-  await child.getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
-  assert.match(child.url(), /__html_viewer_project__/);
-  assert.equal(new URL(child.url()).searchParams.get('from'), 'popup');
-  assert.equal(new URL(child.url()).searchParams.get('label'), "O'Brien");
-  assert.equal(new URL(child.url()).hash, '#legal');
+  await child.frameLocator('#preview-frame').getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
+  const childSite = new URL(child.frames().find(item => item.parentFrame() === child.mainFrame()).url());
+  assert.equal(childSite.pathname, '/legal');
+  assert.equal(childSite.searchParams.get('from'), 'popup');
+  assert.equal(childSite.searchParams.get('label'), "O'Brien");
+  assert.equal(childSite.hash, '#legal');
   await child.close();
-  await popup.locator('#docs').click();
-  await popup.locator('#data').filter({ hasText: 'DIRECTORY-FETCH' }).waitFor({ state: 'visible' });
-  assert.ok(new URL(popup.url()).pathname.endsWith('/docs/'));
-  assert.equal(new URL(popup.url()).searchParams.get('from'), 'home');
-  assert.equal(new URL(popup.url()).searchParams.get('filter'), 'a&b');
-  assert.equal(new URL(popup.url()).hash, '#section');
+  await view.locator('#docs').click();
+  await view.locator('#data').filter({ hasText: 'DIRECTORY-FETCH' }).waitFor({ state: 'visible' });
+  assert.equal(siteUrl().pathname, '/docs/');
+  assert.equal(siteUrl().searchParams.get('from'), 'home');
+  assert.equal(siteUrl().searchParams.get('filter'), 'a&b');
+  assert.equal(siteUrl().hash, '#section');
   await popup.reload({ waitUntil: 'domcontentloaded' });
-  await popup.locator('#data').filter({ hasText: 'DIRECTORY-FETCH' }).waitFor({ state: 'visible' });
-  await popup.locator('#back-home').click();
-  await popup.locator('#home').waitFor({ state: 'visible' });
-  await popup.locator('#send').click();
-  await popup.getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
-  assert.equal(new URL(popup.url()).searchParams.get('from'), 'form');
+  await view.locator('#data').filter({ hasText: 'DIRECTORY-FETCH' }).waitFor({ state: 'visible' });
+  await view.locator('#back-home').click();
+  await view.locator('#home').waitFor({ state: 'visible' });
+  await view.locator('#send').click();
+  await view.getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
+  assert.equal(siteUrl().pathname, '/legal');
+  assert.equal(siteUrl().searchParams.get('from'), 'form');
   await popup.goBack();
-  await popup.locator('#home').waitFor({ state: 'visible' });
+  await view.locator('#home').waitFor({ state: 'visible' });
   await popup.goForward();
-  await popup.getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
-  await popup.locator('#back-home').click();
-  await popup.locator('#missing').click();
-  await popup.getByRole('heading', { name: 'PROJECT-404' }).waitFor({ state: 'visible' });
-  assert.match(popup.url(), /__html_viewer_project__/);
-  await popup.locator('#back-home').click();
-  await popup.locator('#home').waitFor({ state: 'visible' });
+  await view.getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
+  await view.locator('#back-home').click();
+  await view.locator('#missing').click();
+  await view.getByRole('heading', { name: 'PROJECT-404' }).waitFor({ state: 'visible' });
+  assert.equal(siteUrl().pathname, '/missing-page');
+  await view.locator('#back-home').click();
+  await view.locator('#home').waitFor({ state: 'visible' });
   assert.deepEqual(errors, []);
   assert.equal(await page.evaluate(() => navigator.serviceWorker.controller), null);
   await popup.close();
@@ -802,6 +813,8 @@ test('el service worker rechaza versiones fuera de orden sin controlar la aplica
   assert.equal(result.controller, '');
 
   await page.locator('#preview-iframe').evaluate((iframe, url) => {
+    // Project pages run with the editor's origin so the worker can serve them.
+    setPreviewFrameIsolation(true);
     iframe.removeAttribute('srcdoc');
     iframe.src = url;
   }, result.url);
@@ -822,10 +835,9 @@ test('Archivos reconstruye una sesión caducada antes de seguir un enlace', asyn
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   await createSecondPageProject(page);
 
-  const projectUrl = await getPreviewFrameUrl(page);
-  const sessionMatch = projectUrl.match(/__html_viewer_project__\/([^/]+)\//);
-  assert.ok(sessionMatch, `URL de proyecto inesperada: ${projectUrl}`);
-  await expireStoredPreviewSession(page, decodeURIComponent(sessionMatch[1]));
+  const runtimeInfo = await getPreviewRuntimeInfo(page);
+  assert.ok(runtimeInfo?.session, 'La pagina no informa de su sesion de proyecto');
+  await expireStoredPreviewSession(page, runtimeInfo.session);
 
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('ServiceWorker.enable');
@@ -914,10 +926,8 @@ test('Archivos soporta recursos, carreras, 50 ciclos, móvil, recarga y página 
   await openProjectFile(page, 'index.html');
   await page.getByRole('button', { name: 'Volver a la página inicial', exact: true }).click();
   await waitForPreviewVersion(page, 'HOME');
-  const firstProjectUrl = await getPreviewFrameUrl(page);
-  const sessionMatch = firstProjectUrl.match(/__html_viewer_project__\/([^/]+)\//);
-  assert.ok(sessionMatch, `URL de proyecto inesperada: ${firstProjectUrl}`);
-  const sessionId = sessionMatch[1];
+  const sessionId = (await getPreviewRuntimeInfo(page))?.session;
+  assert.ok(sessionId, 'La pagina no informa de su sesion de proyecto');
 
   let currentHomeVersion = 'HOME';
   for (let iteration = 0; iteration < 50; iteration += 1) {
@@ -930,10 +940,10 @@ test('Archivos soporta recursos, carreras, 50 ciclos, móvil, recarga y página 
     await setEditorValue(page, projectIndexHtml(currentHomeVersion));
     await waitForPreviewVersion(page, currentHomeVersion);
 
-    const beforeReloadUrl = await getPreviewFrameUrl(page);
+    const beforeReload = await getPreviewRuntimeInfo(page);
     await page.getByRole('button', { name: 'Recargar previsualización', exact: true }).click();
-    const afterReloadUrl = await waitForPreviewFrameUrlChange(page, beforeReloadUrl);
-    assert.match(afterReloadUrl, new RegExp(`__html_viewer_project__/${sessionId}/`));
+    const afterReload = await waitForPreviewSourceChange(page, beforeReload.sourceHref);
+    assert.equal(afterReload.session, sessionId);
     await waitForPreviewVersion(page, currentHomeVersion);
     assert.equal(await page.locator('#preview-iframe').count(), 1);
   }
@@ -985,8 +995,9 @@ test('Archivos soporta recursos, carreras, 50 ciclos, móvil, recarga y página 
   await page.locator('#btn-preview-full').click();
   const popup = await popupPromise;
   await popup.waitForLoadState('domcontentloaded');
-  await popup.locator('#version').waitFor({ state: 'visible', timeout: 10000 });
-  assert.equal(await popup.locator('#version').textContent(), currentHomeVersion);
+  const fullPageVersion = popup.frameLocator('#preview-frame').locator('#version');
+  await fullPageVersion.waitFor({ state: 'visible', timeout: 10000 });
+  assert.equal(await fullPageVersion.textContent(), currentHomeVersion);
   await popup.close();
 
   await page.frameLocator('#preview-iframe').locator('#to-second').click();
