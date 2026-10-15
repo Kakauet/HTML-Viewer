@@ -4,7 +4,7 @@ const { once } = require('node:events');
 const http = require('node:http');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
-const { chromium } = require('playwright');
+const { browserType, browserName } = require('./browser.cjs');
 
 const workspaceRoot = path.resolve(__dirname, '..');
 const port = Number(process.env.PREVIEW_COMPAT_PORT || 4174);
@@ -44,7 +44,7 @@ before(async () => {
     waitForServer(baseUrl),
     once(serverProcess, 'exit').then(([code]) => { throw new Error(`El servidor de prueba terminó antes de tiempo (${code})`); })
   ]);
-  browser = await chromium.launch({ headless: true });
+  browser = await browserType.launch({ headless: true });
 });
 
 after(async () => {
@@ -149,7 +149,8 @@ test('un sitio con rutas limpias se recorre en la vista previa y en página comp
   const popup = await popupPromise;
   await popup.waitForURL(/preview\.html/);
   const full = popup.frameLocator('#preview-frame');
-  await full.locator('#page').filter({ hasText: 'SERVICIO' }).waitFor({ timeout: 15000 });
+  try { await full.locator('#page').filter({ hasText: 'SERVICIO' }).waitFor({ timeout: 8000 }); }
+  catch (error) { console.error('FULL_PAGE', await Promise.all(popup.frames().map(async f => ({ url: f.url(), body: await f.evaluate(() => document.body.innerText) })))); throw error; }
   assert.equal(await popup.evaluate(() => window.opener), null);
   await full.locator('#legal').click();
   await full.locator('#page').filter({ hasText: 'LEGAL' }).waitFor();
@@ -200,15 +201,83 @@ test('la página previsualizada no toca el almacenamiento ni los archivos del ed
   await page.close();
 });
 
+test('el worker rechaza mensajes de proyectos y páginas ajenas tras reiniciarse', { skip: browserName !== 'chromium' }, async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
+  await importSite(page);
+  const sessionId = await page.evaluate(() => projectPreviewSessionId);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('ServiceWorker.enable');
+  await cdp.send('ServiceWorker.stopAllWorkers');
+  const denied = await siteFrame(page).evaluate(async sessionId => {
+    // Bypass the instance stub through this frame's native getter. A worker
+    // obtained from the parent's container would send with the parent's ID.
+    const container = Object.getOwnPropertyDescriptor(Navigator.prototype, 'serviceWorker').get.call(navigator);
+    const registrations = await container.getRegistrations();
+    return new Promise(resolve => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = event => { channel.port1.close(); resolve(event.data); };
+      registrations[0].active.postMessage({ type: 'html-viewer:touch-project', sessionId }, [channel.port2]);
+    });
+  }, sessionId);
+  assert.equal(denied.ok, false);
+  const unrelated = await page.context().newPage();
+  await unrelated.goto(`${baseUrl}404.html`);
+  const deniedUnrelated = await unrelated.evaluate(async sessionId => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    return new Promise(resolve => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = event => { channel.port1.close(); resolve(event.data); };
+      registrations[0].active.postMessage({ type: 'html-viewer:touch-project', sessionId }, [channel.port2]);
+    });
+  }, sessionId);
+  assert.equal(deniedUnrelated.ok, false);
+  assert.equal(await page.evaluate(async sessionId => (await postProjectPreviewMessage({ type: 'html-viewer:touch-project', sessionId })).ok, sessionId), true);
+  await page.frameLocator('#preview-iframe').locator('#to-blog').click();
+  await page.frameLocator('#preview-iframe').locator('#page').filter({ hasText: 'BLOG' }).waitFor();
+  await cdp.detach();
+  await context.close();
+});
+
+test('importar una carpeta conserva lotes, recursos anidados y navegación', async () => {
+  const fs = require('node:fs');
+  const tree = directory => fs.readdirSync(directory, { withFileTypes: true }).map(entry => {
+    const full = path.join(directory, entry.name);
+    return entry.isDirectory() ? { name: entry.name, children: tree(full) } : { name: entry.name, text: fs.readFileSync(full, 'utf8') };
+  });
+  const fixture = { name: 'project', children: tree(path.join(workspaceRoot, 'tests/fixtures/project')) };
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
+  const imported = await page.evaluate(async fixture => {
+    const entry = item => item.children ? {
+      name: item.name, isDirectory: true, isFile: false,
+      createReader() {
+        const children = item.children.map(entry);
+        return { readEntries(callback) { queueMicrotask(() => callback(children.splice(0, 1))); } };
+      }
+    } : { name: item.name, isFile: true, isDirectory: false, file(callback) { callback(new File([item.text], item.name)); } };
+    return importFolderEntry(entry(fixture));
+  }, fixture);
+  assert.equal(imported, true);
+  const view = page.frameLocator('#preview-iframe');
+  await view.locator('#version').filter({ hasText: 'HOME-V1' }).waitFor({ timeout: 15000 });
+  assert.equal(await view.locator('#nested-image').evaluate(async image => { await image.decode(); return image.naturalWidth > 0; }), true);
+  assert.equal(await view.locator('body').getAttribute('data-fixture-ready'), 'true');
+  assert.equal(await view.locator('body').evaluate(body => getComputedStyle(body).backgroundColor), 'rgb(244, 247, 252)');
+  await view.locator('#to-second').click();
+  await view.locator('#version').filter({ hasText: 'SECOND-V1' }).waitFor();
+  await page.close();
+});
+
 test('Simple aísla el documento del editor pero conserva localStorage y cookies', async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   const input = page.locator('.monaco-editor textarea.inputarea');
-  await input.waitFor({ state: 'visible', timeout: 15000 });
+  await input.waitFor({ state: 'attached', timeout: 15000 });
   await page.evaluate(() => localStorage.setItem('editor-secret', 'top-secret'));
-  await input.focus();
-  await page.keyboard.press('Control+A');
-  await page.keyboard.insertText(`<!doctype html><h1 id="state"></h1><script>
+  await page.waitForFunction(() => monacoLoaded);
+  await page.evaluate(html => editor.setValue(html), `<!doctype html><h1 id="state"></h1><script>
     let parentAccess = 'blocked';
     try { parent.document.title; parentAccess = 'open'; } catch {}
     localStorage.setItem('mine', '1');

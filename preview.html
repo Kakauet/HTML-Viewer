@@ -3,7 +3,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <script>(()=>{try{const f=window.frameElement;if(!f)return;const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\/$/,''),back=location.pathname.replace(/\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>
+  <meta name="html-viewer-preview-origin" content="">
+  <script>(()=>{try{const f=window.frameElement;if(!f){if(parent!==window){window.stop();parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:location.href},'*')}return;}const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\/$/,''),back=location.pathname.replace(/\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>HTML Viewer</title>
@@ -18,17 +19,149 @@
 </head>
 <body>
   <p id="preview-message" role="status" hidden></p>
-  <iframe id="preview-frame" title="Preview" data-html-viewer-preview sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation" allow="accelerometer *; autoplay *; camera *; clipboard-read *; clipboard-write *; display-capture *; encrypted-media *; fullscreen *; geolocation *; gyroscope *; magnetometer *; microphone *; midi *; picture-in-picture *; screen-wake-lock *; xr-spatial-tracking *; payment &#39;none&#39;; usb &#39;none&#39;; serial &#39;none&#39;; hid &#39;none&#39;; bluetooth &#39;none&#39;; publickey-credentials-get &#39;none&#39;; identity-credentials-get &#39;none&#39;" hidden></iframe>
+  <iframe id="preview-frame" title="Preview" data-html-viewer-preview sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock" allow="accelerometer *; autoplay *; camera *; clipboard-read *; clipboard-write *; display-capture *; encrypted-media *; fullscreen *; geolocation *; gyroscope *; magnetometer *; microphone *; midi *; picture-in-picture *; screen-wake-lock *; xr-spatial-tracking *; payment &#39;none&#39;; usb &#39;none&#39;; serial &#39;none&#39;; hid &#39;none&#39;; bluetooth &#39;none&#39;; publickey-credentials-get &#39;none&#39;; identity-credentials-get &#39;none&#39;" hidden></iframe>
+  <script>// Registration and message ports belong to this transport, not project state.
+// Resetting a failed connection also invalidates any older registration result.
+function createPreviewWorkerTransport({ scriptUrl, scope, readyTimeout, messageTimeout }) {
+  let worker = null;
+  let pending = null;
+  let generation = 0;
+
+  const available = () => Boolean(window.isSecureContext && 'serviceWorker' in navigator &&
+    (location.protocol === 'http:' || location.protocol === 'https:'));
+
+  function reset() {
+    generation += 1;
+    worker?.dispose?.();
+    worker = null;
+    pending = null;
+  }
+
+  function waitForActivation(registration) {
+    if (registration.active) return Promise.resolve(registration.active);
+    const candidate = registration.installing || registration.waiting;
+    if (!candidate) return Promise.resolve(null);
+    return new Promise(resolve => {
+      const finish = value => {
+        clearTimeout(timer);
+        candidate.removeEventListener('statechange', check);
+        resolve(value);
+      };
+      const check = () => {
+        if (candidate.state === 'activated') finish(registration.active || candidate);
+        else if (candidate.state === 'redundant') finish(null);
+      };
+      const timer = setTimeout(() => finish(registration.active || null), readyTimeout);
+      candidate.addEventListener('statechange', check);
+      check();
+    });
+  }
+
+  function ensure() {
+    if (!available()) return Promise.resolve(null);
+    if (worker?.state === 'activated') return Promise.resolve(worker);
+    if (pending) return pending;
+    worker = null;
+    const currentGeneration = generation;
+    const remote = new URL(scriptUrl).origin !== location.origin;
+    const attempt = (remote ? connectRemote() : navigator.serviceWorker.register(scriptUrl, { scope, updateViaCache: 'none' }))
+      .then(async registration => {
+        if (remote) {
+          if (generation !== currentGeneration) { registration.dispose(); return null; }
+          worker = registration;
+          return worker;
+        }
+        registration.update?.().catch(() => {});
+        const candidate = await waitForActivation(registration);
+        if (generation !== currentGeneration) return null;
+        worker = candidate;
+        return candidate;
+      })
+      .catch(error => { console.warn('Preview worker connection failed.', error); return null; })
+      .finally(() => { if (pending === attempt) pending = null; });
+    pending = attempt;
+    return attempt;
+  }
+
+  function send(message, transfer = []) {
+    return new Promise((resolve, reject) => {
+      if (!worker) return reject(new Error('Service Worker no disponible'));
+      const channel = new MessageChannel();
+      const finish = (error, data) => {
+        clearTimeout(timer);
+        channel.port1.onmessage = null;
+        channel.port1.onmessageerror = null;
+        channel.port1.close();
+        channel.port2.close();
+        if (error) reject(error);
+        else resolve(data);
+      };
+      const timer = setTimeout(() => finish(new Error('Timeout sincronizando preview')), messageTimeout);
+      channel.port1.onmessage = event => {
+        const data = event.data || {};
+        finish(data.ok ? null : new Error(data.error || 'Error sincronizando preview'), data);
+      };
+      channel.port1.onmessageerror = () => finish(new Error('Respuesta de preview no válida'));
+      try { worker.postMessage(message, [channel.port2, ...transfer]); }
+      catch (error) { finish(error); }
+    });
+  }
+
+  function cleanupLegacy() {
+    if (!available()) return;
+    if (new URL(scriptUrl).origin !== location.origin) return;
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      const expected = new URL(scriptUrl);
+      const expectedScope = new URL(scope, location.href).href;
+      for (const registration of registrations) {
+        const candidate = registration.active || registration.waiting || registration.installing;
+        if (!candidate) continue;
+        const url = new URL(candidate.scriptURL);
+        if (url.origin === expected.origin && url.pathname === expected.pathname && registration.scope !== expectedScope) {
+          registration.unregister().catch(() => {});
+        }
+      }
+    }).catch(() => {});
+  }
+
+  function connectRemote() {
+    return new Promise((resolve, reject) => {
+      const frame = document.createElement('iframe');
+      frame.hidden = true;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+      const url = new URL('preview-bridge.html', scriptUrl);
+      url.searchParams.set('editor', location.origin);
+      const channel = new MessageChannel();
+      const dispose = () => { channel.port1.close(); frame.remove(); };
+      const timer = setTimeout(() => { dispose(); reject(new Error('Preview origin unavailable')); }, Math.max(readyTimeout, 12000));
+      channel.port1.onmessage = event => {
+        clearTimeout(timer);
+        channel.port1.onmessage = null;
+        if (!event.data?.ok) { dispose(); reject(new Error(event.data?.error || 'Preview origin unavailable')); return; }
+        resolve({ state: 'activated', dispose, postMessage: (data, transfer) => channel.port1.postMessage(data, transfer) });
+      };
+      frame.addEventListener('load', () => {
+        frame.contentWindow.postMessage({ type: 'html-viewer:connect-preview', script: new URL(scriptUrl).pathname + new URL(scriptUrl).search }, url.origin, [channel.port2]);
+      }, { once: true });
+      frame.src = url.href;
+      document.body.appendChild(frame);
+    });
+  }
+
+  return { available, ensure, send, reset, cleanupLegacy };
+}
+</script>
   <script>
     // Full-page view of a preview. The previewed page runs in a sandboxed
     // frame with the same isolation as inside the editor, and this window
     // drops its reference to the editor before any project code runs.
-    (() => {
+    (async () => {
       'use strict';
       const MARKER = '__html_viewer_project__';
       const CONTROL = 'html-viewer-preview-control';
       const DOCUMENT_KEY = 'html-viewer:full-page-document';
-      const SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation';
+      let SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock';
       const params = new URLSearchParams(location.search);
       const lang = (params.get('lang') || navigator.language || '').toLowerCase().startsWith('es') ? 'es' : 'en';
       const text = {
@@ -39,13 +172,17 @@
 
       const editorWindow = window.opener;
       try { window.opener = null; } catch {}
-      const frame = document.getElementById('preview-frame');
+      let frame = document.getElementById('preview-frame');
+      if (frame.sandbox.supports?.('allow-presentation')) SANDBOX += ' allow-presentation';
       const message = document.getElementById('preview-message');
       const show = value => {
         message.textContent = value || '';
         message.hidden = !value;
       };
       const appBase = new URL('.', location.href).pathname;
+      const configuredOrigin = params.get('previewOrigin') ?? document.querySelector('meta[name="html-viewer-preview-origin"]').content;
+      const previewOrigin = configuredOrigin || location.origin;
+      const remote = previewOrigin !== location.origin;
       const namespaceRoot = `${appBase}${MARKER}/`;
       const session = params.get('session') || '';
 
@@ -54,14 +191,22 @@
         // preview worker serves it; history entries live in this window.
         const encodePath = value => String(value || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
         const root = encodePath(params.get('root'));
-        const siteBase = new URL(`${namespaceRoot}${encodeURIComponent(session)}/${root ? `${root}/` : ''}`, location.origin);
+        const siteBase = new URL(`${namespaceRoot}${encodeURIComponent(session)}/${root ? `${root}/` : ''}`, previewOrigin);
         const currentRoute = () => (location.hash.startsWith('#/') ? location.hash.slice(1) : '/');
         const toProject = route => {
-          const url = new URL(route, location.origin);
+          const url = new URL(route, previewOrigin);
+          if (url.pathname.startsWith(siteBase.pathname)) return url.href;
           const target = new URL(url.pathname.replace(/^\/+/, ''), siteBase);
           target.search = url.search;
           target.hash = url.hash;
           return target.href;
+        };
+        const routeFromUrl = url => {
+          const pathname = url.pathname.startsWith(siteBase.pathname)
+            ? '/' + url.pathname.slice(siteBase.pathname.length).replace(/(^|\/)index\.html?$/i, '$1') : url.pathname;
+          const search = new URLSearchParams(url.search);
+          search.delete('__html_viewer_version');
+          return `${pathname}${search.size ? '?' + search : ''}${url.hash}`;
         };
         const load = route => {
           try { frame.contentWindow.location.replace(toProject(route)); }
@@ -82,9 +227,38 @@
 
         frame.setAttribute('sandbox', `${SANDBOX} allow-same-origin`);
         frame.hidden = false;
-        frame.src = toProject(currentRoute());
+        // Initialise this window's worker connection before its first frame
+        // request (including when a full-page view starts in a new process).
+        try {
+          if (remote) {
+            const transport = createPreviewWorkerTransport({ scriptUrl: new URL(`${appBase}preview-sw.js?v=0ebb069e25f3`, previewOrigin).href,
+              scope: namespaceRoot, readyTimeout: 8000, messageTimeout: 8000 });
+            if (!await transport.ensure()) throw new Error('Preview origin unavailable');
+          } else {
+          const registration = await navigator.serviceWorker.register(new URL('preview-sw.js?v=0ebb069e25f3', location.href), {
+            scope: namespaceRoot, updateViaCache: 'none'
+          });
+          if (!registration.active) {
+            const worker = registration.installing || registration.waiting;
+            await new Promise((resolve, reject) => {
+              const timer = setTimeout(() => finish(new Error('Preview worker timed out')), 8000);
+              const finish = error => { clearTimeout(timer); worker?.removeEventListener('statechange', check); error ? reject(error) : resolve(); };
+              const check = () => { if (worker?.state === 'activated') finish(); else if (!worker || worker.state === 'redundant') finish(new Error('Preview worker unavailable')); };
+              worker?.addEventListener('statechange', check); check();
+            });
+          }
+          }
+          // A popup can create its initial about:blank frame before the
+          // worker connection exists. Start a fresh browsing context after
+          // activation so WebKit also selects the project worker.
+          const readyFrame = frame.cloneNode(false);
+          frame.replaceWith(readyFrame);
+          frame = readyFrame;
+          frame.src = toProject(currentRoute());
+        } catch { show(text.expired); return; }
 
         frame.addEventListener('load', () => {
+          if (remote) return;
           try {
             const win = frame.contentWindow;
             if (!win.__htmlViewerPreview) {
@@ -110,14 +284,20 @@
         window.addEventListener('message', event => {
           const data = event.data;
           if (!data || data.channel !== CONTROL || event.source !== frame.contentWindow) return;
+          if (remote && event.origin !== previewOrigin) return;
           if (data.type === 'navigate' && typeof data.target === 'string') {
             const url = new URL(data.target, location.href);
-            if (url.origin !== location.origin) return;
-            const route = `${url.pathname}${url.search}${url.hash}`;
+            if (url.origin !== previewOrigin) return;
+            const route = routeFromUrl(url);
             history.pushState({ route }, '', `#${route}`);
             load(route);
           } else if (data.type === 'location') {
-            reflect();
+            if (remote && typeof data.url === 'string') {
+              const url = new URL(data.url);
+              if (url.origin !== previewOrigin) return;
+              history.replaceState(history.state, '', `#${routeFromUrl(url)}`);
+              document.title = String(data.title || 'HTML Viewer');
+            } else reflect();
           }
         });
         window.addEventListener('popstate', () => load(currentRoute()));
@@ -141,7 +321,7 @@
         show(text.loading);
         window.addEventListener('message', event => {
           const data = event.data;
-          if (event.source !== editorWindow || data?.type !== 'html-viewer:full-page-document' || typeof data.html !== 'string') return;
+          if (event.source !== editorWindow || event.origin !== location.origin || data?.type !== 'html-viewer:full-page-document' || typeof data.html !== 'string') return;
           const doc = { html: data.html, title: String(data.title || '') };
           try { sessionStorage.setItem(DOCUMENT_KEY, JSON.stringify(doc)); } catch {}
           render(doc);

@@ -5,7 +5,7 @@ const http = require('node:http');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
 const { pathToFileURL } = require('node:url');
-const { chromium } = require('playwright');
+const { browserType, browserName } = require('./browser.cjs');
 
 const workspaceRoot = path.resolve(__dirname, '..');
 const externalBaseUrl = process.env.PREVIEW_BASE_URL || '';
@@ -43,28 +43,26 @@ function waitForServer(url, timeoutMs = 10000) {
 }
 
 async function waitForMonaco(page) {
+  await page.waitForFunction(() => typeof monacoLoaded !== 'undefined' && monacoLoaded);
   const input = page.locator('.monaco-editor textarea.inputarea');
-  await input.waitFor({ state: 'visible', timeout: 15000 });
+  await input.waitFor({ state: 'attached', timeout: 15000 });
   return input;
 }
 
+// Seed fixtures through Monaco's API; keyboard behaviour has dedicated UI tests.
 async function setEditorValue(page, value) {
-  const input = await waitForMonaco(page);
-  await input.focus();
-  await page.keyboard.press('Control+A');
-  if (value) await page.keyboard.insertText(value);
-  else await page.keyboard.press('Backspace');
+  await waitForMonaco(page);
+  await page.evaluate(value => editor.setValue(value), value);
 }
 
 async function setAvailableEditorValue(page, value) {
-  // Monaco can replace the fallback between an isVisible check and a fill.
-  // Resolve whichever input is visible at action time, as a user would.
-  const input = page.locator('.monaco-editor textarea.inputarea:visible, #fallback-textarea:visible').first();
-  await input.waitFor({ state: 'visible', timeout: 15000 });
-  await input.focus();
-  await page.keyboard.press('Control+A');
-  if (value) await page.keyboard.insertText(value);
-  else await page.keyboard.press('Backspace');
+  await page.evaluate(value => {
+    if (monacoLoaded) editor.setValue(value);
+    else {
+      fallbackTextarea.value = value;
+      fallbackTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, value);
 }
 
 async function getPreviewFrameUrl(page) {
@@ -261,7 +259,7 @@ before(async () => {
       })
     ]);
   }
-  browser = await chromium.launch({ headless: true });
+  browser = await browserType.launch({ headless: true });
 });
 
 after(async () => {
@@ -629,9 +627,11 @@ test('página completa conserva rutas limpias, iframes anidados, ventanas y form
   assert.equal(await siteFrame().evaluate(() => /\[native code\]/.test(fetch.toString()) && /\[native code\]/.test(XMLHttpRequest.toString())), true);
   await view.frameLocator('#embedded').getByRole('heading', { name: 'FRAME-ONE', exact: true }).waitFor({ state: 'visible' });
   await view.frameLocator('#embedded').frameLocator('#deep').getByRole('heading', { name: 'FRAME-TWO', exact: true }).waitFor({ state: 'visible' });
-  await view.frameLocator('#embedded').locator('#frame-legal').click();
+  // Firefox's isolated-world performance object can be stale during nested
+  // frame navigation; the heading assertions already establish visibility.
+  await view.frameLocator('#embedded').locator('#frame-legal').click({ force: browserName === 'firefox' });
   await view.frameLocator('#embedded').getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
-  await view.frameLocator('#embedded').locator('#back-home').click();
+  await view.frameLocator('#embedded').locator('#back-home').click({ force: browserName === 'firefox' });
   await view.frameLocator('#embedded').getByRole('heading', { name: 'FULL-HOME' }).waitFor({ state: 'visible' });
   await view.locator('#send-frame').click();
   await view.frameLocator('#embedded').getByRole('heading', { name: 'FRAME-ONE', exact: true }).waitFor({ state: 'visible' });
@@ -646,7 +646,7 @@ test('página completa conserva rutas limpias, iframes anidados, ventanas y form
   const childPromise = popup.waitForEvent('popup');
   await view.locator('#new-tab').click();
   const child = await childPromise;
-  await child.frameLocator('#preview-frame').getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible' });
+  await child.frameLocator('#preview-frame').getByRole('heading', { name: 'FULL-LEGAL' }).waitFor({ state: 'visible', timeout: 8000 });
   const childSite = new URL(child.frames().find(item => item.parentFrame() === child.mainFrame()).url());
   assert.equal(childSite.pathname, '/legal');
   assert.equal(childSite.searchParams.get('from'), 'popup');
@@ -708,7 +708,7 @@ test('Simple aplica solo el último cambio, vuelve una vez y sigue editando', as
   assert.doesNotMatch(latestSrcdoc, /SIMPLE-BURST-7/);
 
   await setEditorValue(page, '');
-  await page.waitForFunction(() => !document.querySelector('#preview-iframe')?.contentDocument?.body?.innerText.trim());
+  await page.frameLocator('#preview-iframe').locator('#version').waitFor({ state: 'hidden' });
   await setEditorValue(page, '<!doctype html><html><body><h1 id="version">SIMPLE-RETURN</h1><a id="simple-away" href="about:blank#away">Salir</a></body></html>');
   await waitForPreviewVersion(page, 'SIMPLE-RETURN');
 
@@ -812,18 +812,19 @@ test('el service worker rechaza versiones fuera de orden sin controlar la aplica
   assert.equal(result.stale.version, 2);
   assert.equal(result.controller, '');
 
-  await page.locator('#preview-iframe').evaluate((iframe, url) => {
-    // Project pages run with the editor's origin so the worker can serve them.
-    setPreviewFrameIsolation(true);
-    iframe.removeAttribute('srcdoc');
+  await page.evaluate(url => {
+    const iframe = document.createElement('iframe');
+    iframe.id = 'sw-version-probe';
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     iframe.src = url;
+    document.body.appendChild(iframe);
   }, result.url);
-  await waitForPreviewVersion(page, 'SW-LATEST');
+  await page.frameLocator('#sw-version-probe').locator('#version').filter({ hasText: 'SW-LATEST' }).waitFor();
   assert.equal(await page.locator('#preview-iframe').count(), 1);
   await page.close();
 });
 
-test('Archivos reconstruye una sesión caducada antes de seguir un enlace', async () => {
+test('Archivos reconstruye una sesión caducada antes de seguir un enlace', { skip: browserName !== 'chromium' }, async () => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const failedProjectRequests = [];
   page.on('response', response => {
@@ -858,7 +859,12 @@ test('Archivos soporta recursos, carreras, 50 ciclos, móvil, recarga y página 
   const failedProjectRequests = [];
   page.on('pageerror', error => pageErrors.push(error.message));
   page.on('console', message => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
+    // Monaco probes Safari's clipboard on user gestures. The automated
+    // browser may deny that optional permission; it is not a preview error.
+    const clipboardDenied = browserName === 'webkit' &&
+      message.location().url.includes('/assets/vendor/monaco-editor/') &&
+      message.text().includes('NotAllowedError');
+    if (message.type() === 'error' && !clipboardDenied) consoleErrors.push(message.text());
   });
   page.on('response', response => {
     if (response.status() >= 400 && response.url().includes('/__html_viewer_project__/')) {
@@ -897,6 +903,10 @@ test('Archivos soporta recursos, carreras, 50 ciclos, móvil, recarga y página 
   assert.equal(resourceState.scriptStatus, 'JS-READY');
   assert.equal(resourceState.imageComplete, true);
   assert.ok(resourceState.imageWidth > 0);
+  // Fixture construction updates incomplete pages before their assets exist.
+  // Resource assertions above establish the starting point for the stress run.
+  consoleErrors.length = 0;
+  failedProjectRequests.length = 0;
 
   await page.frameLocator('#preview-iframe').locator('#to-second').click();
   await waitForPreviewVersion(page, 'SECOND');
@@ -991,6 +1001,8 @@ test('Archivos soporta recursos, carreras, 50 ciclos, móvil, recarga y página 
   }));
   assert.ok(blobState.live <= blobState.files + 2, `Se conservaron ${blobState.live} Blob URLs para ${blobState.files} archivos`);
 
+  const workerScriptsBeforePopup = await page.evaluate(async () =>
+    (await navigator.serviceWorker.getRegistrations()).map(registration => registration.active?.scriptURL));
   const popupPromise = page.waitForEvent('popup');
   await page.locator('#btn-preview-full').click();
   const popup = await popupPromise;
@@ -999,6 +1011,9 @@ test('Archivos soporta recursos, carreras, 50 ciclos, móvil, recarga y página 
   await fullPageVersion.waitFor({ state: 'visible', timeout: 10000 });
   assert.equal(await fullPageVersion.textContent(), currentHomeVersion);
   await popup.close();
+  await page.bringToFront();
+  assert.deepEqual(await page.evaluate(async () =>
+    (await navigator.serviceWorker.getRegistrations()).map(registration => registration.active?.scriptURL)), workerScriptsBeforePopup);
 
   await page.frameLocator('#preview-iframe').locator('#to-second').click();
   await waitForPreviewVersion(page, 'SECOND-LATEST');

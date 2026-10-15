@@ -621,22 +621,27 @@ function rememberProjectClient(event, sessionId) {
   }
 }
 
-// Only the editor may change preview sessions; previewed pages are clients of
-// this worker too and must not rewrite another session's files.
-function isProjectClient(source) {
-  if (!source?.id) return false;
-  if (projectClientSessions.has(source.id)) return true;
-  try { return Boolean(parseProjectUrl(new URL(source.url))); } catch { return false; }
+// A project's clean URL can equal the editor URL. Check persisted client IDs
+// too, since the browser may stop and restart the worker between messages.
+async function isEditorClient(source) {
+  if (!source?.id || source.type !== 'window') return false;
+  try {
+    const url = new URL(source.url);
+    const base = new URL('.', self.location.href);
+    if (url.origin !== base.origin || !['', 'index.html', 'es/', 'es/index.html', 'preview-bridge.html'].some(path => url.pathname === base.pathname + path)) return false;
+    if (projectClientSessions.has(source.id) || parseProjectUrl(url)) return false;
+    return !await readPersistedProjectClient(source.id);
+  } catch { return false; }
 }
 
-self.addEventListener('message', event => {
+async function handleProjectMessage(event) {
   const data = event.data || {};
   const replyPort = event.ports && event.ports[0];
   const reply = payload => {
     if (replyPort) replyPort.postMessage(payload);
   };
-  if (isProjectClient(event.source)) {
-    reply({ ok: false, error: 'Preview pages cannot change preview sessions' });
+  if (!await isEditorClient(event.source)) {
+    reply({ ok: false, error: 'Only editor pages can change preview sessions' });
     return;
   }
 
@@ -658,8 +663,7 @@ self.addEventListener('message', event => {
       schedulePersistentSessionWrite(sessionId);
       reply({ ok: true, found: true, version: session.version, count: session.files.size });
     });
-    event.waitUntil(touchSession.then(() => sessionPersistenceStates.get(sessionId)?.promise));
-    return;
+    return touchSession.then(() => sessionPersistenceStates.get(sessionId)?.promise);
   }
 
   if (data.type !== 'html-viewer:set-project') return;
@@ -723,7 +727,11 @@ self.addEventListener('message', event => {
       reply({ ok: false, error: err && err.message ? err.message : String(err) });
     }
   });
-  event.waitUntil(updateSession.then(() => sessionPersistenceStates.get(sessionId)?.promise));
+  return updateSession.then(() => sessionPersistenceStates.get(sessionId)?.promise);
+}
+
+self.addEventListener('message', event => {
+  event.waitUntil(handleProjectMessage(event));
 });
 
 self.addEventListener('fetch', event => {

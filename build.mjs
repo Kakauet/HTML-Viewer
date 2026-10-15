@@ -14,7 +14,7 @@ console.log('Building HTML Viewer assets...\n');
 // All generation scripts resolve their inputs from the project root.
 process.chdir(fileURLToPath(new URL('.', import.meta.url)));
 
-await import('./build-jszip.mjs');         // browser-global JSZip, independent of Monaco AMD
+await import('./build-vendor.mjs');        // pinned local Monaco + browser-global JSZip
 await import('./build-app-bundle.mjs');   // src/app/* -> app.bundle.js
 await import('./build-site.mjs');          // shared editor -> static EN/ES HTML
 await import('./build-lucide-subset.mjs'); // vendor/lucide.full.min.js -> lucide.min.js (subset)

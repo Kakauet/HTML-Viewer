@@ -5,9 +5,11 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..', process.argv[3] || '.');
 const port = Number(process.env.PORT || process.argv[2] || 8000);
 const host = process.env.HOST || '127.0.0.1';
-// Mount dist under a repository path to verify GitHub Pages without redirects
+// Mount dist under a subpath to verify static hosting without redirects
 // or hosting-specific response headers.
 const baseOption = process.argv.find(arg => arg.startsWith('--base-path='));
+const previewOption = process.argv.find(arg => arg.startsWith('--preview-origin='));
+const previewOrigin = previewOption ? new URL(previewOption.slice('--preview-origin='.length)).origin : '';
 const mount = baseOption ? baseOption.slice('--base-path='.length).replace(/\/$/, '') : '';
 if (mount && (!mount.startsWith('/') || mount.includes('..'))) throw Error('Invalid base path');
 const headerRules = [];
@@ -121,7 +123,9 @@ const server = http.createServer((request, response) => {
     response.end();
     return;
   }
-  fs.createReadStream(filePath).pipe(response);
+  if (previewOrigin && extension === '.html') {
+    response.end(fs.readFileSync(filePath, 'utf8').replace(/(<meta name="html-viewer-preview-origin" content=")[^"]*/, `$1${previewOrigin}`));
+  } else fs.createReadStream(filePath).pipe(response);
 });
 
 server.listen(port, host, () => {

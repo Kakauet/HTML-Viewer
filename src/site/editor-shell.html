@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   {{previewGuard}}
   {{head}}
+  <meta name="html-viewer-preview-origin" content="{{previewOrigin}}">
   <script>
     (() => {
       try {
@@ -26,7 +27,8 @@
   <link rel="preload" href="/assets/fonts/inter-latin-v20.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/outfit-latin-v15.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/jetbrains-mono-latin-v24.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/vendor/monaco-editor/0.39.0/min/vs/loader.js" as="script">
+  <link rel="preload" href="/assets/vendor/monaco-editor/{{monacoVersion}}/browser/editor.main.js" as="script">
+  <link rel="stylesheet" href="/assets/vendor/monaco-editor/{{monacoVersion}}/browser/editor.main.css">
   <style>
     @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: optional; src: url('/assets/fonts/inter-latin-v20.woff2') format('woff2'); }
     @font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: optional; src: url('/assets/fonts/inter-latin-v20.woff2') format('woff2'); }

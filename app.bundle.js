@@ -540,12 +540,18 @@ const PREVIEW_IDLE_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_RENDERING_LABEL = currentLocale === 'es' ? 'Renderizando' : 'Rendering';
 const PREVIEW_READY_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_NOT_FOUND_LABEL = currentLocale === 'es' ? 'No encontrado' : 'Not found';
-const MONACO_VERSION = '0.39.0';
+const MONACO_VERSION = '0.57.0';
+const JSZIP_VERSION = '3.10.2';
 // Resolve lazy libraries from the bundle, not the localized document URL.
 // This also preserves Simple mode when index.html is opened via file://.
 const APP_ROOT_URL = new URL('.', document.currentScript?.src || document.baseURI).href;
-const MONACO_BASE_PATH = new URL(`assets/vendor/monaco-editor/${MONACO_VERSION}/min/vs`, APP_ROOT_URL).href;
-const MONACO_LOADER_PATH = `${MONACO_BASE_PATH}/loader.js`;
+const CONFIGURED_PREVIEW_ORIGIN = document.querySelector('meta[name="html-viewer-preview-origin"]')?.content || '';
+let PREVIEW_ROOT_URL = CONFIGURED_PREVIEW_ORIGIN
+  ? new URL(new URL(APP_ROOT_URL).pathname, CONFIGURED_PREVIEW_ORIGIN).href : APP_ROOT_URL;
+let PREVIEW_ORIGIN = new URL(PREVIEW_ROOT_URL).origin;
+let IS_REMOTE_PREVIEW = PREVIEW_ORIGIN !== new URL(APP_ROOT_URL).origin;
+const MONACO_BASE_PATH = new URL(`assets/vendor/monaco-editor/${MONACO_VERSION}/browser`, APP_ROOT_URL).href;
+const MONACO_LOADER_PATH = `${MONACO_BASE_PATH}/editor.main.js`;
 const MONACO_LOAD_TIMEOUT_MS = 12000;
 const MONACO_RETRY_DELAY_MS = 1200;
 const MONACO_MAX_AUTOMATIC_RETRIES = 1;
@@ -567,8 +573,8 @@ const PREVIEW_HOST_PAGE = 'preview.html';
 // for Files, whose pages must be served by the preview service worker.
 const PREVIEW_SANDBOX_TOKENS = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation';
 const PROJECT_PREVIEW_VERSION_PARAM = '__html_viewer_version';
-const PROJECT_PREVIEW_SW_VERSION = '2e535f81b03d';
-const PROJECT_PREVIEW_SW_URL = new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, APP_ROOT_URL).href;
+const PROJECT_PREVIEW_SW_VERSION = '0ebb069e25f3';
+const PROJECT_PREVIEW_SW_URL = new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, PREVIEW_ROOT_URL).href;
 const PROJECT_PREVIEW_SW_SCOPE = new URL(`${PROJECT_PREVIEW_PREFIX}/`, APP_ROOT_URL).pathname;
 const PROJECT_PREVIEW_SW_READY_TIMEOUT_MS = 1800;
 const PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS = 8000;
@@ -703,8 +709,6 @@ let monacoLoaded = false;
 let editorFontSize = EDITOR_DEFAULT_FONT_SIZE;
 
 let projectPreviewSessionId = getOrCreatePreviewSessionId();
-let projectPreviewServiceWorkerPromise = null;
-let projectPreviewServiceWorker = null;
 let projectPreviewVersion = 0;
 let projectPreviewIssuedVersion = 0;
 let projectPreviewLastUrl = '';
@@ -1382,14 +1386,175 @@ let files = [
 ];
 ;
 
-/* ---- src/app/03-project-preview-service-worker.js ---- */
-function canUseProjectPreviewServiceWorker() {
-  return Boolean(
-    window.isSecureContext &&
-    'serviceWorker' in navigator &&
-    (location.protocol === 'http:' || location.protocol === 'https:')
-  );
+/* ---- src/app/preview-worker-transport.js ---- */
+// Registration and message ports belong to this transport, not project state.
+// Resetting a failed connection also invalidates any older registration result.
+function createPreviewWorkerTransport({ scriptUrl, scope, readyTimeout, messageTimeout }) {
+  let worker = null;
+  let pending = null;
+  let generation = 0;
+
+  const available = () => Boolean(window.isSecureContext && 'serviceWorker' in navigator &&
+    (location.protocol === 'http:' || location.protocol === 'https:'));
+
+  function reset() {
+    generation += 1;
+    worker?.dispose?.();
+    worker = null;
+    pending = null;
+  }
+
+  function waitForActivation(registration) {
+    if (registration.active) return Promise.resolve(registration.active);
+    const candidate = registration.installing || registration.waiting;
+    if (!candidate) return Promise.resolve(null);
+    return new Promise(resolve => {
+      const finish = value => {
+        clearTimeout(timer);
+        candidate.removeEventListener('statechange', check);
+        resolve(value);
+      };
+      const check = () => {
+        if (candidate.state === 'activated') finish(registration.active || candidate);
+        else if (candidate.state === 'redundant') finish(null);
+      };
+      const timer = setTimeout(() => finish(registration.active || null), readyTimeout);
+      candidate.addEventListener('statechange', check);
+      check();
+    });
+  }
+
+  function ensure() {
+    if (!available()) return Promise.resolve(null);
+    if (worker?.state === 'activated') return Promise.resolve(worker);
+    if (pending) return pending;
+    worker = null;
+    const currentGeneration = generation;
+    const remote = new URL(scriptUrl).origin !== location.origin;
+    const attempt = (remote ? connectRemote() : navigator.serviceWorker.register(scriptUrl, { scope, updateViaCache: 'none' }))
+      .then(async registration => {
+        if (remote) {
+          if (generation !== currentGeneration) { registration.dispose(); return null; }
+          worker = registration;
+          return worker;
+        }
+        registration.update?.().catch(() => {});
+        const candidate = await waitForActivation(registration);
+        if (generation !== currentGeneration) return null;
+        worker = candidate;
+        return candidate;
+      })
+      .catch(error => { console.warn('Preview worker connection failed.', error); return null; })
+      .finally(() => { if (pending === attempt) pending = null; });
+    pending = attempt;
+    return attempt;
+  }
+
+  function send(message, transfer = []) {
+    return new Promise((resolve, reject) => {
+      if (!worker) return reject(new Error('Service Worker no disponible'));
+      const channel = new MessageChannel();
+      const finish = (error, data) => {
+        clearTimeout(timer);
+        channel.port1.onmessage = null;
+        channel.port1.onmessageerror = null;
+        channel.port1.close();
+        channel.port2.close();
+        if (error) reject(error);
+        else resolve(data);
+      };
+      const timer = setTimeout(() => finish(new Error('Timeout sincronizando preview')), messageTimeout);
+      channel.port1.onmessage = event => {
+        const data = event.data || {};
+        finish(data.ok ? null : new Error(data.error || 'Error sincronizando preview'), data);
+      };
+      channel.port1.onmessageerror = () => finish(new Error('Respuesta de preview no válida'));
+      try { worker.postMessage(message, [channel.port2, ...transfer]); }
+      catch (error) { finish(error); }
+    });
+  }
+
+  function cleanupLegacy() {
+    if (!available()) return;
+    if (new URL(scriptUrl).origin !== location.origin) return;
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      const expected = new URL(scriptUrl);
+      const expectedScope = new URL(scope, location.href).href;
+      for (const registration of registrations) {
+        const candidate = registration.active || registration.waiting || registration.installing;
+        if (!candidate) continue;
+        const url = new URL(candidate.scriptURL);
+        if (url.origin === expected.origin && url.pathname === expected.pathname && registration.scope !== expectedScope) {
+          registration.unregister().catch(() => {});
+        }
+      }
+    }).catch(() => {});
+  }
+
+  function connectRemote() {
+    return new Promise((resolve, reject) => {
+      const frame = document.createElement('iframe');
+      frame.hidden = true;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+      const url = new URL('preview-bridge.html', scriptUrl);
+      url.searchParams.set('editor', location.origin);
+      const channel = new MessageChannel();
+      const dispose = () => { channel.port1.close(); frame.remove(); };
+      const timer = setTimeout(() => { dispose(); reject(new Error('Preview origin unavailable')); }, Math.max(readyTimeout, 12000));
+      channel.port1.onmessage = event => {
+        clearTimeout(timer);
+        channel.port1.onmessage = null;
+        if (!event.data?.ok) { dispose(); reject(new Error(event.data?.error || 'Preview origin unavailable')); return; }
+        resolve({ state: 'activated', dispose, postMessage: (data, transfer) => channel.port1.postMessage(data, transfer) });
+      };
+      frame.addEventListener('load', () => {
+        frame.contentWindow.postMessage({ type: 'html-viewer:connect-preview', script: new URL(scriptUrl).pathname + new URL(scriptUrl).search }, url.origin, [channel.port2]);
+      }, { once: true });
+      frame.src = url.href;
+      document.body.appendChild(frame);
+    });
+  }
+
+  return { available, ensure, send, reset, cleanupLegacy };
 }
+;
+
+/* ---- src/app/03-project-preview-service-worker.js ---- */
+let projectPreviewTransport = createPreviewWorkerTransport({
+  scriptUrl: PROJECT_PREVIEW_SW_URL,
+  scope: PROJECT_PREVIEW_SW_SCOPE,
+  readyTimeout: PROJECT_PREVIEW_SW_READY_TIMEOUT_MS,
+  messageTimeout: PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS
+});
+const canUseProjectPreviewServiceWorker = projectPreviewTransport.available;
+async function ensureProjectPreviewServiceWorker() {
+  if (!canUseProjectPreviewServiceWorker()) return null;
+  let worker = await projectPreviewTransport.ensure();
+  if (!worker && IS_REMOTE_PREVIEW) {
+    // Tracking protection can block a third-party worker. Preserve project
+    // playback through the existing trusted mode, with an explicit notice.
+    projectPreviewTransport.reset();
+    PREVIEW_ROOT_URL = APP_ROOT_URL;
+    PREVIEW_ORIGIN = new URL(APP_ROOT_URL).origin;
+    IS_REMOTE_PREVIEW = false;
+    remotePreviewSnapshot = null;
+    projectPreviewTransport = createPreviewWorkerTransport({
+      scriptUrl: new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, APP_ROOT_URL).href,
+      scope: PROJECT_PREVIEW_SW_SCOPE,
+      readyTimeout: PROJECT_PREVIEW_SW_READY_TIMEOUT_MS,
+      messageTimeout: PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS
+    });
+    projectPreviewTransport.cleanupLegacy();
+    showToast(currentLocale === 'es'
+      ? 'El navegador no permite separar la vista previa. Se usa el modo compatible: abre solo proyectos de confianza.'
+      : 'The browser blocked preview isolation. Compatibility mode is active: open only trusted projects.', 'info');
+    worker = await projectPreviewTransport.ensure();
+  }
+  return worker;
+}
+const postProjectPreviewMessage = (message, transfer) => projectPreviewTransport.send(message, transfer);
+projectPreviewTransport.cleanupLegacy();
 
 function markProjectPreviewDirty(path = null, { all = false } = {}) {
   projectPreviewDirtySerial += 1;
@@ -1413,135 +1578,6 @@ function yieldToMainThread() {
     } else {
       setTimeout(resolve, 0);
     }
-  });
-}
-
-function withTimeout(promise, timeoutMs, fallbackValue = null) {
-  return new Promise(resolve => {
-    const timeoutId = setTimeout(() => resolve(fallbackValue), timeoutMs);
-    Promise.resolve(promise)
-      .then(value => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      })
-      .catch(() => {
-        clearTimeout(timeoutId);
-        resolve(fallbackValue);
-      });
-  });
-}
-
-function isProjectPreviewServiceWorkerScript(scriptUrl = '') {
-  try {
-    const url = new URL(scriptUrl, location.href);
-    return url.origin === location.origin && url.pathname === new URL(PROJECT_PREVIEW_SW_URL).pathname;
-  } catch {
-    return String(scriptUrl || '').includes('preview-sw.js');
-  }
-}
-
-function isCurrentProjectPreviewScope(scopeUrl = '') {
-  try {
-    const url = new URL(scopeUrl, location.href);
-    return url.pathname === PROJECT_PREVIEW_SW_SCOPE;
-  } catch {
-    return String(scopeUrl || '').endsWith(PROJECT_PREVIEW_SW_SCOPE);
-  }
-}
-
-function cleanupLegacyProjectPreviewServiceWorkers() {
-  if (!canUseProjectPreviewServiceWorker()) return;
-  navigator.serviceWorker.getRegistrations()
-    .then(registrations => {
-      registrations.forEach(registration => {
-        const worker = registration.active || registration.waiting || registration.installing;
-        if (!worker || !isProjectPreviewServiceWorkerScript(worker.scriptURL)) return;
-        if (isCurrentProjectPreviewScope(registration.scope)) return;
-        registration.unregister().catch(() => {});
-      });
-    })
-    .catch(() => {});
-}
-
-function waitForProjectPreviewServiceWorker(registration) {
-  if (registration.active) return Promise.resolve(registration.active);
-
-  const worker = registration.installing || registration.waiting;
-  if (!worker) return Promise.resolve(null);
-
-  return new Promise(resolve => {
-    const finish = () => {
-      if (worker.state === 'activated') {
-        worker.removeEventListener('statechange', finish);
-        resolve(registration.active || worker);
-      } else if (worker.state === 'redundant') {
-        worker.removeEventListener('statechange', finish);
-        resolve(null);
-      }
-    };
-    worker.addEventListener('statechange', finish);
-    finish();
-  });
-}
-
-cleanupLegacyProjectPreviewServiceWorkers();
-
-async function ensureProjectPreviewServiceWorker() {
-  if (!canUseProjectPreviewServiceWorker()) return null;
-  if (projectPreviewServiceWorker?.state === 'activated') return projectPreviewServiceWorker;
-  projectPreviewServiceWorker = null;
-  projectPreviewServiceWorkerPromise = null;
-
-  if (!projectPreviewServiceWorkerPromise) {
-    projectPreviewServiceWorkerPromise = navigator.serviceWorker.register(PROJECT_PREVIEW_SW_URL, { scope: PROJECT_PREVIEW_SW_SCOPE, updateViaCache: 'none' })
-      .then(async registration => {
-        registration.update?.().catch(() => {});
-        const worker = await withTimeout(
-          waitForProjectPreviewServiceWorker(registration),
-          PROJECT_PREVIEW_SW_READY_TIMEOUT_MS,
-          registration.active || null
-        );
-        if (!worker) {
-          projectPreviewServiceWorkerPromise = null;
-          return null;
-        }
-        projectPreviewServiceWorker = worker;
-        return worker;
-      })
-      .catch(err => {
-        void err;
-        projectPreviewServiceWorker = null;
-        projectPreviewServiceWorkerPromise = null;
-        return null;
-      });
-  }
-
-  return projectPreviewServiceWorkerPromise;
-}
-
-function postProjectPreviewMessage(message, transfer = []) {
-  return new Promise((resolve, reject) => {
-    const worker = projectPreviewServiceWorker;
-    if (!worker) {
-      reject(new Error('Service Worker no disponible'));
-      return;
-    }
-
-    const channel = new MessageChannel();
-    const timeoutId = setTimeout(() => {
-      channel.port1.close();
-      reject(new Error('Timeout sincronizando preview'));
-    }, PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS);
-
-    channel.port1.onmessage = event => {
-      clearTimeout(timeoutId);
-      channel.port1.close();
-      const data = event.data || {};
-      if (data.ok) resolve(data);
-      else reject(new Error(data.error || 'Error sincronizando preview'));
-    };
-
-    worker.postMessage(message, [channel.port2, ...transfer]);
   });
 }
 
@@ -1616,7 +1652,7 @@ function getProjectPreviewUrl(path = '', version = null) {
     .filter(Boolean)
     .map(segment => encodeURIComponent(segment))
     .join('/');
-  const url = new URL(`${PROJECT_PREVIEW_PREFIX}/${projectPreviewSessionId}/${encodedPath}${trailingSlash}`, APP_ROOT_URL);
+  const url = new URL(`${PROJECT_PREVIEW_PREFIX}/${projectPreviewSessionId}/${encodedPath}${trailingSlash}`, PREVIEW_ROOT_URL);
   if (version !== null && version !== undefined) {
     url.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(version));
   }
@@ -1641,6 +1677,7 @@ function getProjectPreviewPathFromUrl(urlValue) {
 // (`/servicios/x`); everything else in the editor reasons about the worker
 // URL that served it. Only primitive values are read from the page.
 function readPreviewRuntimeInfo(previewWindow) {
+  if (IS_REMOTE_PREVIEW) return remotePreviewSnapshot?.runtime || null;
   try {
     const info = previewWindow?.__htmlViewerPreview;
     if (!info || info.session !== projectPreviewSessionId) return null;
@@ -1671,13 +1708,17 @@ function getProjectPreviewUrlForSiteUrl(urlValue, version = null, siteRoot = get
 
 function getPreviewIframeUrl() {
   if (!previewIframe) return '';
+  if (!previewIframe.getAttribute('sandbox')?.includes('allow-same-origin')) return previewIframe.src || '';
+  if (IS_REMOTE_PREVIEW && previewLifecycle.mode === 'project') {
+    return remotePreviewSnapshot?.sourceUrl || previewLifecycle.expectedNavigation?.url || previewIframe.src || '';
+  }
   try {
     const previewWindow = previewIframe.contentWindow;
     const href = previewWindow?.location?.href || '';
     const info = href && readPreviewRuntimeInfo(previewWindow);
     if (info?.prettyPathname) {
       const current = new URL(href);
-      if (current.origin === location.origin && !getProjectPreviewPathFromUrl(current.href)) {
+      if (current.origin === PREVIEW_ORIGIN && !getProjectPreviewPathFromUrl(current.href)) {
         if (current.pathname === info.prettyPathname) {
           // Same page as served: keep the exact worker URL (`index.html`).
           const source = new URL(info.sourceHref);
@@ -1703,7 +1744,7 @@ function setProjectPreviewLocation(urlValue, fallbackPath = '') {
   try {
     const url = new URL(urlValue, location.href);
     path = getProjectPreviewPathFromUrl(url.href) || path;
-    if (!path && previewLifecycle.mode === 'project' && url.origin === location.origin) {
+    if (!path && previewLifecycle.mode === 'project' && url.origin === PREVIEW_ORIGIN) {
       path = getProjectPathFromSitePathname(url.pathname);
     }
     search = url.search;
@@ -1784,7 +1825,7 @@ function syncProjectPreviewNavigationState({ preferExpected = true } = {}) {
   if (!currentPath && previewLifecycle.mode === 'project') {
     try {
       const url = new URL(currentUrl, location.href);
-      if (url.origin === location.origin) {
+      if (url.origin === PREVIEW_ORIGIN) {
         currentPath = getProjectPathFromSitePathname(url.pathname);
       }
     } catch {}
@@ -1959,8 +2000,7 @@ async function syncProjectPreviewSnapshotNow({ requestId = null, staleRetryCount
     clearSyncedProjectPreviewDirtyState(dirtyEntriesAtStart, dirtySerialAtStart, fullDirtySerialAtStart);
     return true;
   } catch {
-    projectPreviewServiceWorker = null;
-    projectPreviewServiceWorkerPromise = null;
+    projectPreviewTransport.reset();
     projectPreviewNeedsFullSync = true;
     if (staleRetryCount < 1 && (requestId === null || requestId === previewLifecycle.generation)) {
       return syncProjectPreviewSnapshotNow({ requestId, staleRetryCount: staleRetryCount + 1 });
@@ -3093,11 +3133,15 @@ function htmlViewerPreviewRuntime(config) {
   const initialUrl = new URL(location.href);
   const renderToken = initialUrl.searchParams.get(config.versionParam) || String(config.renderToken ?? '');
   let embeddingFrame = null;
-  try { embeddingFrame = window.frameElement; } catch {}
+  const parentOrigin = location.ancestorOrigins?.[0];
+  if (config.mode === 'project' && (!config.separateOrigin || !parentOrigin || parentOrigin === location.origin)) {
+    try { embeddingFrame = window.frameElement; } catch {}
+  }
   // Only the document shown directly by the editor (or the full-page host)
   // adopts clean URLs and delegates its navigations; nested frames and pages
   // opened at top level keep the worker URL, which survives a reload.
-  const isPreviewRoot = Boolean(embeddingFrame?.hasAttribute?.('data-html-viewer-preview'));
+  const isPreviewRoot = Boolean(embeddingFrame?.hasAttribute?.('data-html-viewer-preview')) ||
+    Boolean(config.separateOrigin && window.parent !== window && !embeddingFrame);
 
   const define = (target, name, descriptor) => {
     try {
@@ -3110,7 +3154,8 @@ function htmlViewerPreviewRuntime(config) {
   const post = (channel, type, details = {}) => {
     try {
       if (window.parent !== window) {
-        window.parent.postMessage({ channel, type, renderToken, url: location.href, time: Date.now(), ...details }, '*');
+        window.parent.postMessage({ channel, type, renderToken, url: location.href,
+          runtime: window.__htmlViewerPreview || null, time: Date.now(), ...details }, '*');
       }
     } catch {}
   };
@@ -3426,7 +3471,8 @@ function htmlViewerPreviewRuntime(config) {
     url = fromHost(url);
     const pretty = url && (isNamespaced(url) ? toPretty(url) : url);
     if (!pretty) return null;
-    const host = new URL(hostPath, location.origin);
+    const host = new URL(hostPath, config.hostOrigin || location.origin);
+    if (host.origin !== location.origin) host.searchParams.set('previewOrigin', location.origin);
     host.searchParams.set('session', config.session);
     if (config.siteRoot) host.searchParams.set('root', config.siteRoot);
     host.hash = `${pretty.pathname}${pretty.search}${pretty.hash}`;
@@ -3684,11 +3730,13 @@ function getProjectPreviewStorageNamespace() {
 function createPreviewRuntimeScript({ mode = 'document', renderToken = '' } = {}) {
   const config = {
     mode,
+    separateOrigin: mode === 'project' && IS_REMOTE_PREVIEW,
     renderToken: String(renderToken ?? ''),
     versionParam: PROJECT_PREVIEW_VERSION_PARAM,
     marker: PROJECT_PREVIEW_PREFIX,
     appBase: new URL(APP_ROOT_URL).pathname,
     hostPage: PREVIEW_HOST_PAGE,
+    hostOrigin: new URL(APP_ROOT_URL).origin,
     session: projectPreviewSessionId,
     siteRoot: mode === 'project' ? getProjectPreviewSiteRootPath() : '',
     namespace: mode === 'project' ? getProjectPreviewStorageNamespace() : PREVIEW_DOCUMENT_STORAGE_NAMESPACE,
@@ -4046,12 +4094,14 @@ preloadFontDataUrls();
 // runtime scopes storage and keeps navigation inside the project instead.
 function setPreviewFrameIsolation(sameOrigin) {
   if (!previewIframe) return;
-  const sandbox = sameOrigin ? `${PREVIEW_SANDBOX_TOKENS} allow-same-origin` : PREVIEW_SANDBOX_TOKENS;
+  const tokens = PREVIEW_SANDBOX_TOKENS.split(' ').filter(token => !previewIframe.sandbox.supports || previewIframe.sandbox.supports(token));
+  const sandbox = sameOrigin ? `${tokens.join(' ')} allow-same-origin` : tokens.join(' ');
   if (previewIframe.getAttribute('sandbox') !== sandbox) previewIframe.setAttribute('sandbox', sandbox);
 }
 
 // Messages the preview runtime sends about the user's interaction with the
 // page. They are only trusted from the iframe's current document.
+let remotePreviewSnapshot = null;
 function handlePreviewControlMessage(event) {
   const message = event.data;
   if (
@@ -4061,15 +4111,28 @@ function handlePreviewControlMessage(event) {
     event.source !== previewIframe.contentWindow
   ) return;
 
+  if (IS_REMOTE_PREVIEW && event.origin === PREVIEW_ORIGIN && typeof message.url === 'string') {
+    const info = message.runtime;
+    if (info?.session === projectPreviewSessionId && String(info.version) === String(projectPreviewVersion) &&
+        ['siteRoot', 'version', 'sourceHref', 'prettyPathname'].every(key => typeof info[key] === 'string')) {
+      try {
+        const current = new URL(message.url);
+        if (current.origin !== PREVIEW_ORIGIN) return;
+        const source = getProjectPreviewPathFromUrl(current.href) ? current : new URL(getProjectPreviewUrlForSiteUrl(current.href, info.version, info.siteRoot));
+        remotePreviewSnapshot = { runtime: { ...info }, sourceUrl: source.href, url: current.href };
+      } catch { return; }
+    }
+  }
+
   if (message.type === 'interaction') {
     previewLastUserInteractionAt = performance.now();
     previewShouldRestoreEditorFocus = false;
   } else if (message.type === 'navigate') {
-    if (editorMode === 'split' && previewLifecycle.mode === 'project' && typeof message.target === 'string') {
+    if (previewLifecycle.mode === 'project' && typeof message.target === 'string') {
       navigatePreviewFromUserAction(message.target, { reason: message.recover ? 'recover' : 'link' });
     }
   } else if (message.type === 'location') {
-    if (editorMode !== 'split' || previewLifecycle.mode !== 'project' || previewLifecycle.expectedNavigation) return;
+    if (previewLifecycle.mode !== 'project' || previewLifecycle.expectedNavigation) return;
     if (syncProjectPreviewNavigationState({ preferExpected: false })) {
       const entryPath = normalizeProjectPath(getEntryFile()?.name || '');
       setPreviewAwayFromHome(!isEntryProjectPreviewPath(previewLifecycle.projectPath || entryPath));
@@ -4150,6 +4213,8 @@ function markPreviewHomeNavigationPending() {
 }
 
 function getPreviewDocumentRenderToken() {
+  if (IS_REMOTE_PREVIEW && previewLifecycle.mode === 'project') return '';
+  if (!previewIframe?.getAttribute('sandbox')?.includes('allow-same-origin')) return '';
   try {
     return previewIframe?.contentDocument?.documentElement?.getAttribute('data-html-viewer-render-token') || '';
   } catch {
@@ -4258,7 +4323,7 @@ function ensureProjectPreviewNavigationScope(currentUrl) {
   } catch {
     return false;
   }
-  if (current.origin !== location.origin || getProjectPreviewPathFromUrl(current.href)) return false;
+  if (current.origin !== PREVIEW_ORIGIN || getProjectPreviewPathFromUrl(current.href)) return false;
 
   const navigationUrl = getCompatiblePreviewNavigationUrl(current.href);
   if (!navigationUrl || previewUrlsMatch(navigationUrl, current.href)) return false;
@@ -4306,7 +4371,7 @@ function navigatePreviewFromUserAction(urlValue, { reason = 'navigation' } = {})
     return false;
   }
 
-  const isProjectDestination = editorMode === 'split' && destination.origin === location.origin;
+  const isProjectDestination = (editorMode === 'split' || previewLifecycle.mode === 'project') && destination.origin === PREVIEW_ORIGIN;
   if (isProjectDestination) {
     const targetPath = getProjectPreviewPathFromUrl(destination.href) || getProjectPathFromSitePathname(destination.pathname);
     setProjectPreviewLocation(destination.href, targetPath);
@@ -4339,7 +4404,7 @@ function getCompatiblePreviewNavigationUrl(urlValue) {
   } catch {
     return String(urlValue || '');
   }
-  if (editorMode !== 'split' || destination.origin !== location.origin) return destination.href;
+  if ((editorMode !== 'split' && previewLifecycle.mode !== 'project') || destination.origin !== PREVIEW_ORIGIN) return destination.href;
   if (getProjectPreviewPathFromUrl(destination.href)) return destination.href;
   // A published-style URL such as `/servicios/x` is relative to the site root.
   return getProjectPreviewUrlForSiteUrl(destination.href, projectPreviewVersion);
@@ -4723,6 +4788,7 @@ function getProjectPreviewTargetUrl(request, targetPath) {
 }
 
 function navigatePreviewFrameToUrl(url, { push = false } = {}) {
+  remotePreviewSnapshot = null;
   setPreviewFrameIsolation(true);
   previewIframe.removeAttribute('srcdoc');
   try {
@@ -4822,8 +4888,11 @@ function renderPreviewNow(request = null) {
   }
 
   if (editorMode === 'unified') {
-    renderSrcdocPreviewNow(getCurrentPreviewCode(), activeRequest);
-    return;
+    const code = getCurrentPreviewCode();
+    if (!IS_REMOTE_PREVIEW || !previewCodeUsesEditorBlobs) {
+      renderSrcdocPreviewNow(code, activeRequest);
+      return;
+    }
   }
 
   void renderProjectPreviewNow(activeRequest).catch(error => {
@@ -5148,7 +5217,7 @@ let monacoLoadFailureToastShown = false;
 
 // Upgrade the instant fallback editor to the locally hosted Monaco build.
 // The promise is shared so interaction, first-paint warmup and retries cannot
-// start competing AMD loads.
+// start competing loads.
 function upgradeToMonaco() {
   if (monacoLoaded) return Promise.resolve(true);
   if (monacoLoadPromise) return monacoLoadPromise;
@@ -5198,11 +5267,7 @@ function upgradeToMonaco() {
     };
 
     try {
-      require.config({
-        paths: { vs: MONACO_BASE_PATH },
-        waitSeconds: Math.ceil(MONACO_LOAD_TIMEOUT_MS / 1000)
-      });
-      require(['vs/editor/editor.main'], function () {
+      (() => {
         if (settled) return;
         try {
            // The mode and active file may have changed while the loader was
@@ -5283,6 +5348,8 @@ function upgradeToMonaco() {
         // Create the editor instance using unifiedModel initially
         editor = monaco.editor.create(document.getElementById('editor-container'), {
           model: unifiedModel,
+          // Preserve the existing textarea input path and its mobile handling.
+          editContext: false,
           theme: isDark ? 'app-dark-theme' : 'app-light-theme',
           automaticLayout: true,
           fontSize: editorFontSize,
@@ -5302,7 +5369,7 @@ function upgradeToMonaco() {
           fixedOverflowWidgets: true,
           bracketPairColorization: { enabled: false },
           guides: { bracketPairs: false, indentation: false },
-          occurrencesHighlight: false,
+          occurrencesHighlight: 'off',
           selectionHighlight: false,
           colorDecorators: false,
            padding: { top: 16 }
@@ -5378,15 +5445,13 @@ function upgradeToMonaco() {
            document.getElementById('editor-container')?.classList.remove('monaco-ready');
            fail(error);
         }
-      }, function (err) {
-        fail(err);
-      });
+      })();
     } catch (e) {
       fail(e);
     }
   });
 
-  const ensureLoader = typeof window.require === 'undefined'
+  const ensureLoader = typeof window.monaco === 'undefined'
     ? loadScript(MONACO_LOADER_PATH)
     : Promise.resolve();
 
@@ -5992,6 +6057,11 @@ if (previewReloadBtn) {
 // The full page opens the preview host, which runs the page with the same
 // sandbox as the editor's preview and without a reference to the editor.
 function getFullPagePreviewRoute() {
+  if (IS_REMOTE_PREVIEW && remotePreviewSnapshot) {
+    const current = new URL(remotePreviewSnapshot.url);
+    return `${current.pathname}${current.search}${current.hash}`;
+  }
+  if (IS_REMOTE_PREVIEW) return getProjectPreviewSiteRoute(previewLifecycle.projectPath || getEntryFile()?.name || '');
   try {
     const current = new URL(previewIframe.contentWindow.location.href);
     if (
@@ -6046,8 +6116,9 @@ document.getElementById('btn-preview-full').addEventListener('click', async () =
   }
 
   try {
-    const hostUrl = new URL(PREVIEW_HOST_PAGE, APP_ROOT_URL);
+    let hostUrl = new URL(PREVIEW_HOST_PAGE, APP_ROOT_URL);
     hostUrl.searchParams.set('lang', currentLocale);
+    if (CONFIGURED_PREVIEW_ORIGIN && !IS_REMOTE_PREVIEW) hostUrl.searchParams.set('previewOrigin', PREVIEW_ORIGIN);
     if (editorMode === 'split' && getEntryFile() && await syncProjectPreviewSnapshot({ full: true })) {
       hostUrl.searchParams.set('session', projectPreviewSessionId);
       const siteRoot = getProjectPreviewSiteRootPath();
@@ -6503,7 +6574,7 @@ function ensureJSZip() {
   }
   const loadAttempt = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = new URL('jszip.min.js?v=fc9f7c05fada', APP_ROOT_URL).href;
+    script.src = new URL('jszip.min.js?v=686bcbab87d2', APP_ROOT_URL).href;
     script.onload = () => {
       if (typeof window.JSZip === 'function') {
         resolve(window.JSZip);
@@ -6512,17 +6583,12 @@ function ensureJSZip() {
       }
     };
     script.onerror = () => {
-      const cdnScript = document.createElement('script');
-      cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      cdnScript.onload = () => {
-        if (typeof window.JSZip === 'function') {
-          resolve(window.JSZip);
-        } else {
-          reject(new Error('JSZip not defined after CDN load'));
-        }
-      };
-      cdnScript.onerror = () => reject(new Error('Failed to load JSZip from CDN'));
-      document.head.appendChild(cdnScript);
+      // An ESM fallback cannot be captured by Monaco's global AMD loader.
+      import(`https://cdn.jsdelivr.net/npm/jszip@${JSZIP_VERSION}/+esm`).then(module => {
+        if (typeof module.default !== 'function') throw new Error('JSZip not defined after CDN load');
+        window.JSZip = module.default;
+        resolve(window.JSZip);
+      }).catch(reject);
     };
     document.head.appendChild(script);
   });

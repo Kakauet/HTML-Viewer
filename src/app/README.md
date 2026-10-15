@@ -7,6 +7,7 @@ run `node build.mjs` to regenerate and fingerprint the served bundle.
 - `01-history.js`: undo/redo snapshots and text change tracking.
 - `02-file-path-records.js`: path normalization, MIME helpers, file records.
 - `03-project-preview-service-worker.js`: project preview service worker sync.
+- `preview-worker-transport.js`: private registration/connection state, activation and message-port lifetime; shared registration promises and retry invalidation.
 - `04-models-entry-utils.js`: Monaco models, entry file selection, small UI helpers.
 - `05-reference-resolution.js`: Simple-mode reference rewriting and injection of the preview runtime.
 - `05b-preview-runtime.js`: runtime script injected into every previewed HTML document, plus its editor-side helpers (storage namespaces, pruning).
@@ -31,9 +32,22 @@ run `node build.mjs` to regenerate and fingerprint the served bundle.
 - A render may commit only while its generation and project-session generation
   are current. Service-worker versions are issued monotonically and become
   visible only after the current request is acknowledged.
-- `Simple` documents run in a sandbox without the editor's origin, so they
-  cannot reach the editor's DOM or storage; a Simple document that uses editor
-  Blob URLs keeps the editor origin instead (see `setPreviewFrameIsolation`).
+- `Simple` documents normally run in an opaque origin. With a separate preview
+  origin, Simple documents needing project assets use the project server too.
+- Netlify builds use `DEPLOY_URL` as the preview origin, separate from
+  `https://instantviewer.online`. `PREVIEW_ORIGIN` can explicitly select another
+  HTTPS origin serving the same build at the same path. `preview-bridge.html`
+  registers the worker there and passes project messages through a dedicated
+  MessagePort. Imported code cannot access the editor's DOM or storage.
+- Static copies without a preview origin retain the same-origin compatibility
+  mode, which requires trusted projects. Runtime namespaces and worker stubs
+  alone are not a security boundary. Blocked third-party workers fall back to
+  the local worker with a visible trust notice. If all worker setup fails, the existing
+  srcdoc compatibility fallback still applies; do not describe it as isolated
+  when editor Blob URLs require `allow-same-origin`.
+- Monaco is built from upstream ESM with esbuild, including every language and
+  five local workers. Its classic browser output preserves `file://` editing
+  without an AMD loader. Run `npm ci && npm run build` to reproduce the assets.
 - `Archivos` syncs a virtual project to `preview-sw.js` under the scoped
   `__html_viewer_project__/` URL beneath the app's deployment path; the main application must never be controlled
   by that service worker.

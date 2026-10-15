@@ -30,11 +30,15 @@ function htmlViewerPreviewRuntime(config) {
   const initialUrl = new URL(location.href);
   const renderToken = initialUrl.searchParams.get(config.versionParam) || String(config.renderToken ?? '');
   let embeddingFrame = null;
-  try { embeddingFrame = window.frameElement; } catch {}
+  const parentOrigin = location.ancestorOrigins?.[0];
+  if (config.mode === 'project' && (!config.separateOrigin || !parentOrigin || parentOrigin === location.origin)) {
+    try { embeddingFrame = window.frameElement; } catch {}
+  }
   // Only the document shown directly by the editor (or the full-page host)
   // adopts clean URLs and delegates its navigations; nested frames and pages
   // opened at top level keep the worker URL, which survives a reload.
-  const isPreviewRoot = Boolean(embeddingFrame?.hasAttribute?.('data-html-viewer-preview'));
+  const isPreviewRoot = Boolean(embeddingFrame?.hasAttribute?.('data-html-viewer-preview')) ||
+    Boolean(config.separateOrigin && window.parent !== window && !embeddingFrame);
 
   const define = (target, name, descriptor) => {
     try {
@@ -47,7 +51,8 @@ function htmlViewerPreviewRuntime(config) {
   const post = (channel, type, details = {}) => {
     try {
       if (window.parent !== window) {
-        window.parent.postMessage({ channel, type, renderToken, url: location.href, time: Date.now(), ...details }, '*');
+        window.parent.postMessage({ channel, type, renderToken, url: location.href,
+          runtime: window.__htmlViewerPreview || null, time: Date.now(), ...details }, '*');
       }
     } catch {}
   };
@@ -363,7 +368,8 @@ function htmlViewerPreviewRuntime(config) {
     url = fromHost(url);
     const pretty = url && (isNamespaced(url) ? toPretty(url) : url);
     if (!pretty) return null;
-    const host = new URL(hostPath, location.origin);
+    const host = new URL(hostPath, config.hostOrigin || location.origin);
+    if (host.origin !== location.origin) host.searchParams.set('previewOrigin', location.origin);
     host.searchParams.set('session', config.session);
     if (config.siteRoot) host.searchParams.set('root', config.siteRoot);
     host.hash = `${pretty.pathname}${pretty.search}${pretty.hash}`;
@@ -621,11 +627,13 @@ function getProjectPreviewStorageNamespace() {
 function createPreviewRuntimeScript({ mode = 'document', renderToken = '' } = {}) {
   const config = {
     mode,
+    separateOrigin: mode === 'project' && IS_REMOTE_PREVIEW,
     renderToken: String(renderToken ?? ''),
     versionParam: PROJECT_PREVIEW_VERSION_PARAM,
     marker: PROJECT_PREVIEW_PREFIX,
     appBase: new URL(APP_ROOT_URL).pathname,
     hostPage: PREVIEW_HOST_PAGE,
+    hostOrigin: new URL(APP_ROOT_URL).origin,
     session: projectPreviewSessionId,
     siteRoot: mode === 'project' ? getProjectPreviewSiteRootPath() : '',
     namespace: mode === 'project' ? getProjectPreviewStorageNamespace() : PREVIEW_DOCUMENT_STORAGE_NAMESPACE,

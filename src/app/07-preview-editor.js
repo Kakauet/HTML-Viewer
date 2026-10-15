@@ -4,12 +4,14 @@
 // runtime scopes storage and keeps navigation inside the project instead.
 function setPreviewFrameIsolation(sameOrigin) {
   if (!previewIframe) return;
-  const sandbox = sameOrigin ? `${PREVIEW_SANDBOX_TOKENS} allow-same-origin` : PREVIEW_SANDBOX_TOKENS;
+  const tokens = PREVIEW_SANDBOX_TOKENS.split(' ').filter(token => !previewIframe.sandbox.supports || previewIframe.sandbox.supports(token));
+  const sandbox = sameOrigin ? `${tokens.join(' ')} allow-same-origin` : tokens.join(' ');
   if (previewIframe.getAttribute('sandbox') !== sandbox) previewIframe.setAttribute('sandbox', sandbox);
 }
 
 // Messages the preview runtime sends about the user's interaction with the
 // page. They are only trusted from the iframe's current document.
+let remotePreviewSnapshot = null;
 function handlePreviewControlMessage(event) {
   const message = event.data;
   if (
@@ -19,15 +21,28 @@ function handlePreviewControlMessage(event) {
     event.source !== previewIframe.contentWindow
   ) return;
 
+  if (IS_REMOTE_PREVIEW && event.origin === PREVIEW_ORIGIN && typeof message.url === 'string') {
+    const info = message.runtime;
+    if (info?.session === projectPreviewSessionId && String(info.version) === String(projectPreviewVersion) &&
+        ['siteRoot', 'version', 'sourceHref', 'prettyPathname'].every(key => typeof info[key] === 'string')) {
+      try {
+        const current = new URL(message.url);
+        if (current.origin !== PREVIEW_ORIGIN) return;
+        const source = getProjectPreviewPathFromUrl(current.href) ? current : new URL(getProjectPreviewUrlForSiteUrl(current.href, info.version, info.siteRoot));
+        remotePreviewSnapshot = { runtime: { ...info }, sourceUrl: source.href, url: current.href };
+      } catch { return; }
+    }
+  }
+
   if (message.type === 'interaction') {
     previewLastUserInteractionAt = performance.now();
     previewShouldRestoreEditorFocus = false;
   } else if (message.type === 'navigate') {
-    if (editorMode === 'split' && previewLifecycle.mode === 'project' && typeof message.target === 'string') {
+    if (previewLifecycle.mode === 'project' && typeof message.target === 'string') {
       navigatePreviewFromUserAction(message.target, { reason: message.recover ? 'recover' : 'link' });
     }
   } else if (message.type === 'location') {
-    if (editorMode !== 'split' || previewLifecycle.mode !== 'project' || previewLifecycle.expectedNavigation) return;
+    if (previewLifecycle.mode !== 'project' || previewLifecycle.expectedNavigation) return;
     if (syncProjectPreviewNavigationState({ preferExpected: false })) {
       const entryPath = normalizeProjectPath(getEntryFile()?.name || '');
       setPreviewAwayFromHome(!isEntryProjectPreviewPath(previewLifecycle.projectPath || entryPath));
@@ -108,6 +123,8 @@ function markPreviewHomeNavigationPending() {
 }
 
 function getPreviewDocumentRenderToken() {
+  if (IS_REMOTE_PREVIEW && previewLifecycle.mode === 'project') return '';
+  if (!previewIframe?.getAttribute('sandbox')?.includes('allow-same-origin')) return '';
   try {
     return previewIframe?.contentDocument?.documentElement?.getAttribute('data-html-viewer-render-token') || '';
   } catch {
@@ -216,7 +233,7 @@ function ensureProjectPreviewNavigationScope(currentUrl) {
   } catch {
     return false;
   }
-  if (current.origin !== location.origin || getProjectPreviewPathFromUrl(current.href)) return false;
+  if (current.origin !== PREVIEW_ORIGIN || getProjectPreviewPathFromUrl(current.href)) return false;
 
   const navigationUrl = getCompatiblePreviewNavigationUrl(current.href);
   if (!navigationUrl || previewUrlsMatch(navigationUrl, current.href)) return false;
@@ -264,7 +281,7 @@ function navigatePreviewFromUserAction(urlValue, { reason = 'navigation' } = {})
     return false;
   }
 
-  const isProjectDestination = editorMode === 'split' && destination.origin === location.origin;
+  const isProjectDestination = (editorMode === 'split' || previewLifecycle.mode === 'project') && destination.origin === PREVIEW_ORIGIN;
   if (isProjectDestination) {
     const targetPath = getProjectPreviewPathFromUrl(destination.href) || getProjectPathFromSitePathname(destination.pathname);
     setProjectPreviewLocation(destination.href, targetPath);
@@ -297,7 +314,7 @@ function getCompatiblePreviewNavigationUrl(urlValue) {
   } catch {
     return String(urlValue || '');
   }
-  if (editorMode !== 'split' || destination.origin !== location.origin) return destination.href;
+  if ((editorMode !== 'split' && previewLifecycle.mode !== 'project') || destination.origin !== PREVIEW_ORIGIN) return destination.href;
   if (getProjectPreviewPathFromUrl(destination.href)) return destination.href;
   // A published-style URL such as `/servicios/x` is relative to the site root.
   return getProjectPreviewUrlForSiteUrl(destination.href, projectPreviewVersion);
@@ -681,6 +698,7 @@ function getProjectPreviewTargetUrl(request, targetPath) {
 }
 
 function navigatePreviewFrameToUrl(url, { push = false } = {}) {
+  remotePreviewSnapshot = null;
   setPreviewFrameIsolation(true);
   previewIframe.removeAttribute('srcdoc');
   try {
@@ -780,8 +798,11 @@ function renderPreviewNow(request = null) {
   }
 
   if (editorMode === 'unified') {
-    renderSrcdocPreviewNow(getCurrentPreviewCode(), activeRequest);
-    return;
+    const code = getCurrentPreviewCode();
+    if (!IS_REMOTE_PREVIEW || !previewCodeUsesEditorBlobs) {
+      renderSrcdocPreviewNow(code, activeRequest);
+      return;
+    }
   }
 
   void renderProjectPreviewNow(activeRequest).catch(error => {
@@ -1106,7 +1127,7 @@ let monacoLoadFailureToastShown = false;
 
 // Upgrade the instant fallback editor to the locally hosted Monaco build.
 // The promise is shared so interaction, first-paint warmup and retries cannot
-// start competing AMD loads.
+// start competing loads.
 function upgradeToMonaco() {
   if (monacoLoaded) return Promise.resolve(true);
   if (monacoLoadPromise) return monacoLoadPromise;
@@ -1156,11 +1177,7 @@ function upgradeToMonaco() {
     };
 
     try {
-      require.config({
-        paths: { vs: MONACO_BASE_PATH },
-        waitSeconds: Math.ceil(MONACO_LOAD_TIMEOUT_MS / 1000)
-      });
-      require(['vs/editor/editor.main'], function () {
+      (() => {
         if (settled) return;
         try {
            // The mode and active file may have changed while the loader was
@@ -1241,6 +1258,8 @@ function upgradeToMonaco() {
         // Create the editor instance using unifiedModel initially
         editor = monaco.editor.create(document.getElementById('editor-container'), {
           model: unifiedModel,
+          // Preserve the existing textarea input path and its mobile handling.
+          editContext: false,
           theme: isDark ? 'app-dark-theme' : 'app-light-theme',
           automaticLayout: true,
           fontSize: editorFontSize,
@@ -1260,7 +1279,7 @@ function upgradeToMonaco() {
           fixedOverflowWidgets: true,
           bracketPairColorization: { enabled: false },
           guides: { bracketPairs: false, indentation: false },
-          occurrencesHighlight: false,
+          occurrencesHighlight: 'off',
           selectionHighlight: false,
           colorDecorators: false,
            padding: { top: 16 }
@@ -1336,15 +1355,13 @@ function upgradeToMonaco() {
            document.getElementById('editor-container')?.classList.remove('monaco-ready');
            fail(error);
         }
-      }, function (err) {
-        fail(err);
-      });
+      })();
     } catch (e) {
       fail(e);
     }
   });
 
-  const ensureLoader = typeof window.require === 'undefined'
+  const ensureLoader = typeof window.monaco === 'undefined'
     ? loadScript(MONACO_LOADER_PATH)
     : Promise.resolve();
 

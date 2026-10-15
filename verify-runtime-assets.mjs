@@ -1,14 +1,13 @@
-import { access, stat } from 'node:fs/promises';
+import { access, stat, readFile } from 'node:fs/promises';
+
+const manifest = JSON.parse(await readFile('package.json', 'utf8'));
+const monacoRoot = `assets/vendor/monaco-editor/${manifest.devDependencies['monaco-editor']}`;
 
 const requiredRuntimeAssets = [
-  'assets/vendor/monaco-editor/0.39.0/LICENSE.txt',
-  'assets/vendor/monaco-editor/0.39.0/min/vs/loader.js',
-  'assets/vendor/monaco-editor/0.39.0/min/vs/editor/editor.main.js',
-  'assets/vendor/monaco-editor/0.39.0/min/vs/editor/editor.main.css',
-  'assets/vendor/monaco-editor/0.39.0/min/vs/base/worker/workerMain.js',
-  'assets/vendor/monaco-editor/0.39.0/min/vs/language/html/htmlWorker.js',
-  'assets/vendor/monaco-editor/0.39.0/min/vs/language/css/cssWorker.js',
-  'assets/vendor/monaco-editor/0.39.0/min/vs/language/typescript/tsWorker.js',
+  `${monacoRoot}/LICENSE.txt`,
+  ...['editor.main.js', 'editor.main.css', 'editor.worker.js', 'html.worker.js',
+    'css.worker.js', 'json.worker.js', 'ts.worker.js'
+  ].map(file => `${monacoRoot}/browser/${file}`),
   'assets/fonts/inter-latin-v20.woff2',
   'assets/fonts/outfit-latin-v15.woff2',
   'assets/fonts/jetbrains-mono-latin-v24.woff2',

@@ -1,9 +1,14 @@
 // Generate only the editor in English/Spanish and a small error page.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import vm from 'node:vm';
+import { createHash } from 'node:crypto';
 
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const app = await readFile('src/app/00-config-state.js', 'utf8');
+const manifest = JSON.parse(await readFile('package.json', 'utf8'));
+const rawPreviewOrigin = process.env.PREVIEW_ORIGIN || process.env.DEPLOY_URL || '';
+const previewOrigin = rawPreviewOrigin ? new URL(rawPreviewOrigin).origin : '';
+if (previewOrigin && !/^https:\/\//.test(previewOrigin) && !/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(previewOrigin)) throw Error('Preview origin must use HTTPS or localhost');
 const dictionaries = vm.runInNewContext(`${app.slice(app.indexOf('const TRANSLATIONS ='), app.indexOf('\nfunction t('))}\nTRANSLATIONS;`, {}, { timeout: 1000 });
 
 function localize(html, lang) {
@@ -47,10 +52,10 @@ function helpContent(es) {
 // never start inside a preview frame: they stop, and a nested project frame
 // is sent back to the project URL. The editor or the full-page host re-routes
 // the preview frame itself when it loads.
-const previewGuard = `<script>(()=>{try{const f=window.frameElement;if(!f)return;const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\\/$/,''),back=location.pathname.replace(/\\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>`;
+const previewGuard = `<script>(()=>{try{const f=window.frameElement;if(!f){if(parent!==window){window.stop();parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:location.href},'*')}return;}const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\\/$/,''),back=location.pathname.replace(/\\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>`;
 
 // The editor's preview frame and the full-page host share one policy.
-const previewSandbox = app.match(/const PREVIEW_SANDBOX_TOKENS = '([^']+)';/)?.[1];
+const previewSandbox = app.match(/const PREVIEW_SANDBOX_TOKENS = '([^']+)';/)?.[1]?.replace(' allow-presentation', '');
 if (!previewSandbox) throw Error('PREVIEW_SANDBOX_TOKENS not found');
 const previewAllow = [
   'accelerometer', 'autoplay', 'camera', 'clipboard-read', 'clipboard-write', 'display-capture', 'encrypted-media',
@@ -59,7 +64,9 @@ const previewAllow = [
 ].map(feature => `${feature} *`).concat([
   'payment', 'usb', 'serial', 'hid', 'bluetooth', 'publickey-credentials-get', 'identity-credentials-get'
 ].map(feature => `${feature} 'none'`)).join('; ');
-const previewTokens = { previewGuard, previewSandbox, previewAllow: escape(previewAllow) };
+const previewTokens = { previewGuard, previewSandbox, previewAllow: escape(previewAllow),
+  previewWorkerVersion: createHash('sha256').update(await readFile('preview-sw.js')).digest('hex').slice(0, 12),
+  previewOrigin: escape(previewOrigin), previewTransport: await readFile('src/app/preview-worker-transport.js', 'utf8') };
 
 const template = await readFile('src/site/editor-shell.html', 'utf8');
 for (const lang of ['en', 'es']) {
@@ -68,6 +75,8 @@ for (const lang of ['en', 'es']) {
   const description = es ? 'Editor de HTML, CSS y JavaScript con vista previa e importación de proyectos.' : 'HTML, CSS and JavaScript editor with live preview and project import.';
   const replacements = {
     lang,
+    monacoVersion: manifest.devDependencies['monaco-editor'],
+    previewOrigin: escape(previewOrigin),
     head: `<meta name="viewport" content="width=device-width, initial-scale=1"><title>HTML Viewer</title><meta name="description" content="${description}"><meta name="theme-color" content="#8842FD"><link rel="icon" href="${prefix}favicon.ico"><link rel="apple-touch-icon" href="${prefix}apple-touch-icon.png">`,
     skip: es ? 'Saltar al editor' : 'Skip to editor',
     editorNav: es ? 'Controles del editor' : 'Editor controls',
@@ -89,6 +98,7 @@ const host = await readFile('src/site/preview-host.html', 'utf8');
 const hostHtml = host.replace(/\{\{(\w+)\}\}/g, (match, key) => previewTokens[key] ?? match);
 if (/\{\{\w+\}\}/.test(hostHtml)) throw Error('Unresolved preview host token');
 await writeFile('preview.html', `<!-- Generated by build-site.mjs; edit src/site/preview-host.html. -->\n${hostHtml}`);
+await writeFile('preview-bridge.html', await readFile('src/site/preview-bridge.html', 'utf8'));
 
 // Missing URLs can be nested. GitHub Actions supplies Pages' base_path.
 const rawBase = process.env.BASE_PATH || '/';

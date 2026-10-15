@@ -4,7 +4,7 @@ const { once } = require('node:events');
 const http = require('node:http');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
-const { chromium } = require('playwright');
+const { browserType, browserName } = require('./browser.cjs');
 
 const root = path.resolve(__dirname, '..');
 const port = 4175;
@@ -40,16 +40,14 @@ async function newPage(options = {}) {
 }
 
 async function waitForMonaco(page) {
-  await page.locator('.monaco-editor textarea.inputarea').waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForFunction(() => typeof monacoLoaded !== 'undefined' && monacoLoaded);
+  await page.locator('.monaco-editor textarea.inputarea').waitFor({ state: 'attached', timeout: 15000 });
 }
 
+// Seed fixtures through Monaco's API; keyboard behaviour has dedicated UI tests.
 async function setMonacoValue(page, value) {
   await waitForMonaco(page);
-  const input = page.locator('.monaco-editor textarea.inputarea');
-  await input.focus();
-  await page.keyboard.press('Control+A');
-  if (value) await page.keyboard.insertText(value);
-  else await page.keyboard.press('Backspace');
+  await page.evaluate(value => editor.setValue(value), value);
 }
 
 async function importHtml(page, marker, name = 'same.html') {
@@ -72,7 +70,7 @@ before(async () => {
     waitForServer(baseUrl),
     once(server, 'exit').then(([code]) => { throw new Error(`Servidor terminó (${code})`); })
   ]);
-  browser = await chromium.launch({ headless: true });
+  browser = await browserType.launch({ headless: true });
 });
 
 after(async () => {
@@ -127,7 +125,7 @@ test('importación lenta no puede sobrescribir una intención posterior', async 
 
 test('Archivos conserva HTML íntegro y Monaco conecta el archivo activo tras carga tardía', async () => {
   const page = await newPage();
-  await page.route('**/vs/loader.js', async route => {
+  await page.route('**/browser/editor.main.js', async route => {
     await new Promise(resolve => setTimeout(resolve, 900));
     await route.continue();
   });

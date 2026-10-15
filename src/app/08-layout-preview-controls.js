@@ -358,6 +358,11 @@ if (previewReloadBtn) {
 // The full page opens the preview host, which runs the page with the same
 // sandbox as the editor's preview and without a reference to the editor.
 function getFullPagePreviewRoute() {
+  if (IS_REMOTE_PREVIEW && remotePreviewSnapshot) {
+    const current = new URL(remotePreviewSnapshot.url);
+    return `${current.pathname}${current.search}${current.hash}`;
+  }
+  if (IS_REMOTE_PREVIEW) return getProjectPreviewSiteRoute(previewLifecycle.projectPath || getEntryFile()?.name || '');
   try {
     const current = new URL(previewIframe.contentWindow.location.href);
     if (
@@ -412,8 +417,9 @@ document.getElementById('btn-preview-full').addEventListener('click', async () =
   }
 
   try {
-    const hostUrl = new URL(PREVIEW_HOST_PAGE, APP_ROOT_URL);
+    let hostUrl = new URL(PREVIEW_HOST_PAGE, APP_ROOT_URL);
     hostUrl.searchParams.set('lang', currentLocale);
+    if (CONFIGURED_PREVIEW_ORIGIN && !IS_REMOTE_PREVIEW) hostUrl.searchParams.set('previewOrigin', PREVIEW_ORIGIN);
     if (editorMode === 'split' && getEntryFile() && await syncProjectPreviewSnapshot({ full: true })) {
       hostUrl.searchParams.set('session', projectPreviewSessionId);
       const siteRoot = getProjectPreviewSiteRootPath();

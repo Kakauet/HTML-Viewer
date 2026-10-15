@@ -4,7 +4,7 @@ const { once } = require('node:events');
 const http = require('node:http');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
-const { chromium } = require('playwright');
+const { browserType, browserName } = require('./browser.cjs');
 
 const root = path.resolve(__dirname, '..');
 const port = 4177;
@@ -37,7 +37,8 @@ async function newPage(options = {}) {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
-  await page.locator('.monaco-editor textarea.inputarea').waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForFunction(() => typeof monacoLoaded !== 'undefined' && monacoLoaded);
+  await page.locator('.monaco-editor textarea.inputarea').waitFor({ state: 'attached', timeout: 15000 });
   return { page, errors };
 }
 
@@ -52,7 +53,7 @@ before(async () => {
     waitForServer(baseUrl),
     once(server, 'exit').then(([code]) => { throw new Error(`Server exited (${code})`); })
   ]);
-  browser = await chromium.launch({ headless: true });
+  browser = await browserType.launch({ headless: true });
 });
 
 after(async () => {
@@ -118,6 +119,23 @@ test('export dialog manages focus, closes with Escape and reports ZIP failures',
   });
   await page.locator('.toast.error').waitFor();
   assert.deepEqual(errors, []);
+  await page.close();
+});
+
+test('ZIP fallback works alongside the ESM Monaco bundle', async () => {
+  const { page } = await newPage();
+  const source = require('node:fs').readFileSync(require.resolve('../vendor/jszip.min.js'), 'utf8');
+  await page.route('**/jszip.min.js*', route => route.abort());
+  // Serve the pinned library as ESM without depending on the public network.
+  await page.route('https://cdn.jsdelivr.net/npm/jszip@3.10.2/+esm', route => route.fulfill({
+    contentType: 'text/javascript',
+    body: `const module={exports:{}};const exports=module.exports;const define=undefined;\n${source}\nexport default module.exports;`
+  }));
+  assert.equal(await page.evaluate(async () => {
+    const Zip = await ensureJSZip();
+    const archive = await new Zip().file('index.html', '<h1>ZIP</h1>').generateAsync({ type: 'uint8array' });
+    return (await Zip.loadAsync(archive)).file('index.html').async('string');
+  }), '<h1>ZIP</h1>');
   await page.close();
 });
 

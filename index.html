@@ -3,8 +3,9 @@
 <html lang="en" data-theme="dark" class="editor-page">
 <head>
   <meta charset="utf-8">
-  <script>(()=>{try{const f=window.frameElement;if(!f)return;const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\/$/,''),back=location.pathname.replace(/\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>
+  <script>(()=>{try{const f=window.frameElement;if(!f){if(parent!==window){window.stop();parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:location.href},'*')}return;}const root=f.hasAttribute('data-html-viewer-preview');const project=root?null:window.parent.__htmlViewerPreview;if(!root&&!project)return;window.stop();if(root){const own=window.parent.location.pathname.replace(/\/$/,''),back=location.pathname.replace(/\/$/,'')===own;window.parent.postMessage({channel:'html-viewer-preview-control',type:'navigate',recover:true,target:back?'/':location.href},location.origin)}if(project)location.replace(new URL(location.pathname.replace(/^\/+/,'')+location.search+location.hash,project.siteBase).href)}catch{}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"><title>HTML Viewer</title><meta name="description" content="HTML, CSS and JavaScript editor with live preview and project import."><meta name="theme-color" content="#8842FD"><link rel="icon" href="./favicon.ico"><link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <meta name="html-viewer-preview-origin" content="">
   <script>
     (() => {
       try {
@@ -27,7 +28,8 @@
   <link rel="preload" href="./assets/fonts/inter-latin-v20.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="./assets/fonts/outfit-latin-v15.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="./assets/fonts/jetbrains-mono-latin-v24.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="./assets/vendor/monaco-editor/0.39.0/min/vs/loader.js" as="script">
+  <link rel="preload" href="./assets/vendor/monaco-editor/0.57.0/browser/editor.main.js" as="script">
+  <link rel="stylesheet" href="./assets/vendor/monaco-editor/0.57.0/browser/editor.main.css">
   <style>
     @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: optional; src: url('./assets/fonts/inter-latin-v20.woff2') format('woff2'); }
     @font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: optional; src: url('./assets/fonts/inter-latin-v20.woff2') format('woff2'); }
@@ -90,7 +92,7 @@
   <!-- Lucide Icons (local copy avoids intermittent CDN startup failures) -->
   <script defer src="./lucide.min.js?v=f87e9a326d5d"></script>
   <!-- JSZip is loaded on demand by the import/export module. -->
-  <script defer src="./app.bundle.js?v=8a5477d344fe"></script>
+  <script defer src="./app.bundle.js?v=3276dcf0e928"></script>
 </head>
 <body>
   <a class="skip-link" href="#workspace-container">Skip to editor</a>
@@ -342,7 +344,7 @@
                 isolation would require serving the preview from a dedicated
                 subdomain (an infra change, not configurable here).
               -->
-              <iframe id="preview-iframe" class="preview-iframe" data-html-viewer-preview sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation" allow="accelerometer *; autoplay *; camera *; clipboard-read *; clipboard-write *; display-capture *; encrypted-media *; fullscreen *; geolocation *; gyroscope *; magnetometer *; microphone *; midi *; picture-in-picture *; screen-wake-lock *; xr-spatial-tracking *; payment &#39;none&#39;; usb &#39;none&#39;; serial &#39;none&#39;; hid &#39;none&#39;; bluetooth &#39;none&#39;; publickey-credentials-get &#39;none&#39;; identity-credentials-get &#39;none&#39;"></iframe>
+              <iframe id="preview-iframe" class="preview-iframe" data-html-viewer-preview sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock" allow="accelerometer *; autoplay *; camera *; clipboard-read *; clipboard-write *; display-capture *; encrypted-media *; fullscreen *; geolocation *; gyroscope *; magnetometer *; microphone *; midi *; picture-in-picture *; screen-wake-lock *; xr-spatial-tracking *; payment &#39;none&#39;; usb &#39;none&#39;; serial &#39;none&#39;; hid &#39;none&#39;; bluetooth &#39;none&#39;; publickey-credentials-get &#39;none&#39;; identity-credentials-get &#39;none&#39;"></iframe>
             </div>
             <section class="preview-console" id="preview-console" data-i18n-aria-label="console_title" aria-label="Diagnostics" hidden>
               <div class="preview-console-resizer" id="preview-console-resizer" role="separator" data-i18n-aria-label="console_resize" aria-label="Resize console" aria-orientation="horizontal" tabindex="0"><span></span></div>

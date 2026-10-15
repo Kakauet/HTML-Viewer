@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="html-viewer-preview-origin" content="{{previewOrigin}}">
   {{previewGuard}}
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
@@ -18,16 +19,17 @@
 <body>
   <p id="preview-message" role="status" hidden></p>
   <iframe id="preview-frame" title="Preview" data-html-viewer-preview sandbox="{{previewSandbox}}" allow="{{previewAllow}}" hidden></iframe>
+  <script>{{previewTransport}}</script>
   <script>
     // Full-page view of a preview. The previewed page runs in a sandboxed
     // frame with the same isolation as inside the editor, and this window
     // drops its reference to the editor before any project code runs.
-    (() => {
+    (async () => {
       'use strict';
       const MARKER = '__html_viewer_project__';
       const CONTROL = 'html-viewer-preview-control';
       const DOCUMENT_KEY = 'html-viewer:full-page-document';
-      const SANDBOX = '{{previewSandbox}}';
+      let SANDBOX = '{{previewSandbox}}';
       const params = new URLSearchParams(location.search);
       const lang = (params.get('lang') || navigator.language || '').toLowerCase().startsWith('es') ? 'es' : 'en';
       const text = {
@@ -38,13 +40,17 @@
 
       const editorWindow = window.opener;
       try { window.opener = null; } catch {}
-      const frame = document.getElementById('preview-frame');
+      let frame = document.getElementById('preview-frame');
+      if (frame.sandbox.supports?.('allow-presentation')) SANDBOX += ' allow-presentation';
       const message = document.getElementById('preview-message');
       const show = value => {
         message.textContent = value || '';
         message.hidden = !value;
       };
       const appBase = new URL('.', location.href).pathname;
+      const configuredOrigin = params.get('previewOrigin') ?? document.querySelector('meta[name="html-viewer-preview-origin"]').content;
+      const previewOrigin = configuredOrigin || location.origin;
+      const remote = previewOrigin !== location.origin;
       const namespaceRoot = `${appBase}${MARKER}/`;
       const session = params.get('session') || '';
 
@@ -53,14 +59,22 @@
         // preview worker serves it; history entries live in this window.
         const encodePath = value => String(value || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
         const root = encodePath(params.get('root'));
-        const siteBase = new URL(`${namespaceRoot}${encodeURIComponent(session)}/${root ? `${root}/` : ''}`, location.origin);
+        const siteBase = new URL(`${namespaceRoot}${encodeURIComponent(session)}/${root ? `${root}/` : ''}`, previewOrigin);
         const currentRoute = () => (location.hash.startsWith('#/') ? location.hash.slice(1) : '/');
         const toProject = route => {
-          const url = new URL(route, location.origin);
+          const url = new URL(route, previewOrigin);
+          if (url.pathname.startsWith(siteBase.pathname)) return url.href;
           const target = new URL(url.pathname.replace(/^\/+/, ''), siteBase);
           target.search = url.search;
           target.hash = url.hash;
           return target.href;
+        };
+        const routeFromUrl = url => {
+          const pathname = url.pathname.startsWith(siteBase.pathname)
+            ? '/' + url.pathname.slice(siteBase.pathname.length).replace(/(^|\/)index\.html?$/i, '$1') : url.pathname;
+          const search = new URLSearchParams(url.search);
+          search.delete('__html_viewer_version');
+          return `${pathname}${search.size ? '?' + search : ''}${url.hash}`;
         };
         const load = route => {
           try { frame.contentWindow.location.replace(toProject(route)); }
@@ -81,9 +95,38 @@
 
         frame.setAttribute('sandbox', `${SANDBOX} allow-same-origin`);
         frame.hidden = false;
-        frame.src = toProject(currentRoute());
+        // Initialise this window's worker connection before its first frame
+        // request (including when a full-page view starts in a new process).
+        try {
+          if (remote) {
+            const transport = createPreviewWorkerTransport({ scriptUrl: new URL(`${appBase}preview-sw.js?v={{previewWorkerVersion}}`, previewOrigin).href,
+              scope: namespaceRoot, readyTimeout: 8000, messageTimeout: 8000 });
+            if (!await transport.ensure()) throw new Error('Preview origin unavailable');
+          } else {
+          const registration = await navigator.serviceWorker.register(new URL('preview-sw.js?v={{previewWorkerVersion}}', location.href), {
+            scope: namespaceRoot, updateViaCache: 'none'
+          });
+          if (!registration.active) {
+            const worker = registration.installing || registration.waiting;
+            await new Promise((resolve, reject) => {
+              const timer = setTimeout(() => finish(new Error('Preview worker timed out')), 8000);
+              const finish = error => { clearTimeout(timer); worker?.removeEventListener('statechange', check); error ? reject(error) : resolve(); };
+              const check = () => { if (worker?.state === 'activated') finish(); else if (!worker || worker.state === 'redundant') finish(new Error('Preview worker unavailable')); };
+              worker?.addEventListener('statechange', check); check();
+            });
+          }
+          }
+          // A popup can create its initial about:blank frame before the
+          // worker connection exists. Start a fresh browsing context after
+          // activation so WebKit also selects the project worker.
+          const readyFrame = frame.cloneNode(false);
+          frame.replaceWith(readyFrame);
+          frame = readyFrame;
+          frame.src = toProject(currentRoute());
+        } catch { show(text.expired); return; }
 
         frame.addEventListener('load', () => {
+          if (remote) return;
           try {
             const win = frame.contentWindow;
             if (!win.__htmlViewerPreview) {
@@ -109,14 +152,20 @@
         window.addEventListener('message', event => {
           const data = event.data;
           if (!data || data.channel !== CONTROL || event.source !== frame.contentWindow) return;
+          if (remote && event.origin !== previewOrigin) return;
           if (data.type === 'navigate' && typeof data.target === 'string') {
             const url = new URL(data.target, location.href);
-            if (url.origin !== location.origin) return;
-            const route = `${url.pathname}${url.search}${url.hash}`;
+            if (url.origin !== previewOrigin) return;
+            const route = routeFromUrl(url);
             history.pushState({ route }, '', `#${route}`);
             load(route);
           } else if (data.type === 'location') {
-            reflect();
+            if (remote && typeof data.url === 'string') {
+              const url = new URL(data.url);
+              if (url.origin !== previewOrigin) return;
+              history.replaceState(history.state, '', `#${routeFromUrl(url)}`);
+              document.title = String(data.title || 'HTML Viewer');
+            } else reflect();
           }
         });
         window.addEventListener('popstate', () => load(currentRoute()));
@@ -140,7 +189,7 @@
         show(text.loading);
         window.addEventListener('message', event => {
           const data = event.data;
-          if (event.source !== editorWindow || data?.type !== 'html-viewer:full-page-document' || typeof data.html !== 'string') return;
+          if (event.source !== editorWindow || event.origin !== location.origin || data?.type !== 'html-viewer:full-page-document' || typeof data.html !== 'string') return;
           const doc = { html: data.html, title: String(data.title || '') };
           try { sessionStorage.setItem(DOCUMENT_KEY, JSON.stringify(doc)); } catch {}
           render(doc);

@@ -1,10 +1,37 @@
-function canUseProjectPreviewServiceWorker() {
-  return Boolean(
-    window.isSecureContext &&
-    'serviceWorker' in navigator &&
-    (location.protocol === 'http:' || location.protocol === 'https:')
-  );
+let projectPreviewTransport = createPreviewWorkerTransport({
+  scriptUrl: PROJECT_PREVIEW_SW_URL,
+  scope: PROJECT_PREVIEW_SW_SCOPE,
+  readyTimeout: PROJECT_PREVIEW_SW_READY_TIMEOUT_MS,
+  messageTimeout: PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS
+});
+const canUseProjectPreviewServiceWorker = projectPreviewTransport.available;
+async function ensureProjectPreviewServiceWorker() {
+  if (!canUseProjectPreviewServiceWorker()) return null;
+  let worker = await projectPreviewTransport.ensure();
+  if (!worker && IS_REMOTE_PREVIEW) {
+    // Tracking protection can block a third-party worker. Preserve project
+    // playback through the existing trusted mode, with an explicit notice.
+    projectPreviewTransport.reset();
+    PREVIEW_ROOT_URL = APP_ROOT_URL;
+    PREVIEW_ORIGIN = new URL(APP_ROOT_URL).origin;
+    IS_REMOTE_PREVIEW = false;
+    remotePreviewSnapshot = null;
+    projectPreviewTransport = createPreviewWorkerTransport({
+      scriptUrl: new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, APP_ROOT_URL).href,
+      scope: PROJECT_PREVIEW_SW_SCOPE,
+      readyTimeout: PROJECT_PREVIEW_SW_READY_TIMEOUT_MS,
+      messageTimeout: PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS
+    });
+    projectPreviewTransport.cleanupLegacy();
+    showToast(currentLocale === 'es'
+      ? 'El navegador no permite separar la vista previa. Se usa el modo compatible: abre solo proyectos de confianza.'
+      : 'The browser blocked preview isolation. Compatibility mode is active: open only trusted projects.', 'info');
+    worker = await projectPreviewTransport.ensure();
+  }
+  return worker;
 }
+const postProjectPreviewMessage = (message, transfer) => projectPreviewTransport.send(message, transfer);
+projectPreviewTransport.cleanupLegacy();
 
 function markProjectPreviewDirty(path = null, { all = false } = {}) {
   projectPreviewDirtySerial += 1;
@@ -28,135 +55,6 @@ function yieldToMainThread() {
     } else {
       setTimeout(resolve, 0);
     }
-  });
-}
-
-function withTimeout(promise, timeoutMs, fallbackValue = null) {
-  return new Promise(resolve => {
-    const timeoutId = setTimeout(() => resolve(fallbackValue), timeoutMs);
-    Promise.resolve(promise)
-      .then(value => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      })
-      .catch(() => {
-        clearTimeout(timeoutId);
-        resolve(fallbackValue);
-      });
-  });
-}
-
-function isProjectPreviewServiceWorkerScript(scriptUrl = '') {
-  try {
-    const url = new URL(scriptUrl, location.href);
-    return url.origin === location.origin && url.pathname === new URL(PROJECT_PREVIEW_SW_URL).pathname;
-  } catch {
-    return String(scriptUrl || '').includes('preview-sw.js');
-  }
-}
-
-function isCurrentProjectPreviewScope(scopeUrl = '') {
-  try {
-    const url = new URL(scopeUrl, location.href);
-    return url.pathname === PROJECT_PREVIEW_SW_SCOPE;
-  } catch {
-    return String(scopeUrl || '').endsWith(PROJECT_PREVIEW_SW_SCOPE);
-  }
-}
-
-function cleanupLegacyProjectPreviewServiceWorkers() {
-  if (!canUseProjectPreviewServiceWorker()) return;
-  navigator.serviceWorker.getRegistrations()
-    .then(registrations => {
-      registrations.forEach(registration => {
-        const worker = registration.active || registration.waiting || registration.installing;
-        if (!worker || !isProjectPreviewServiceWorkerScript(worker.scriptURL)) return;
-        if (isCurrentProjectPreviewScope(registration.scope)) return;
-        registration.unregister().catch(() => {});
-      });
-    })
-    .catch(() => {});
-}
-
-function waitForProjectPreviewServiceWorker(registration) {
-  if (registration.active) return Promise.resolve(registration.active);
-
-  const worker = registration.installing || registration.waiting;
-  if (!worker) return Promise.resolve(null);
-
-  return new Promise(resolve => {
-    const finish = () => {
-      if (worker.state === 'activated') {
-        worker.removeEventListener('statechange', finish);
-        resolve(registration.active || worker);
-      } else if (worker.state === 'redundant') {
-        worker.removeEventListener('statechange', finish);
-        resolve(null);
-      }
-    };
-    worker.addEventListener('statechange', finish);
-    finish();
-  });
-}
-
-cleanupLegacyProjectPreviewServiceWorkers();
-
-async function ensureProjectPreviewServiceWorker() {
-  if (!canUseProjectPreviewServiceWorker()) return null;
-  if (projectPreviewServiceWorker?.state === 'activated') return projectPreviewServiceWorker;
-  projectPreviewServiceWorker = null;
-  projectPreviewServiceWorkerPromise = null;
-
-  if (!projectPreviewServiceWorkerPromise) {
-    projectPreviewServiceWorkerPromise = navigator.serviceWorker.register(PROJECT_PREVIEW_SW_URL, { scope: PROJECT_PREVIEW_SW_SCOPE, updateViaCache: 'none' })
-      .then(async registration => {
-        registration.update?.().catch(() => {});
-        const worker = await withTimeout(
-          waitForProjectPreviewServiceWorker(registration),
-          PROJECT_PREVIEW_SW_READY_TIMEOUT_MS,
-          registration.active || null
-        );
-        if (!worker) {
-          projectPreviewServiceWorkerPromise = null;
-          return null;
-        }
-        projectPreviewServiceWorker = worker;
-        return worker;
-      })
-      .catch(err => {
-        void err;
-        projectPreviewServiceWorker = null;
-        projectPreviewServiceWorkerPromise = null;
-        return null;
-      });
-  }
-
-  return projectPreviewServiceWorkerPromise;
-}
-
-function postProjectPreviewMessage(message, transfer = []) {
-  return new Promise((resolve, reject) => {
-    const worker = projectPreviewServiceWorker;
-    if (!worker) {
-      reject(new Error('Service Worker no disponible'));
-      return;
-    }
-
-    const channel = new MessageChannel();
-    const timeoutId = setTimeout(() => {
-      channel.port1.close();
-      reject(new Error('Timeout sincronizando preview'));
-    }, PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS);
-
-    channel.port1.onmessage = event => {
-      clearTimeout(timeoutId);
-      channel.port1.close();
-      const data = event.data || {};
-      if (data.ok) resolve(data);
-      else reject(new Error(data.error || 'Error sincronizando preview'));
-    };
-
-    worker.postMessage(message, [channel.port2, ...transfer]);
   });
 }
 
@@ -231,7 +129,7 @@ function getProjectPreviewUrl(path = '', version = null) {
     .filter(Boolean)
     .map(segment => encodeURIComponent(segment))
     .join('/');
-  const url = new URL(`${PROJECT_PREVIEW_PREFIX}/${projectPreviewSessionId}/${encodedPath}${trailingSlash}`, APP_ROOT_URL);
+  const url = new URL(`${PROJECT_PREVIEW_PREFIX}/${projectPreviewSessionId}/${encodedPath}${trailingSlash}`, PREVIEW_ROOT_URL);
   if (version !== null && version !== undefined) {
     url.searchParams.set(PROJECT_PREVIEW_VERSION_PARAM, String(version));
   }
@@ -256,6 +154,7 @@ function getProjectPreviewPathFromUrl(urlValue) {
 // (`/servicios/x`); everything else in the editor reasons about the worker
 // URL that served it. Only primitive values are read from the page.
 function readPreviewRuntimeInfo(previewWindow) {
+  if (IS_REMOTE_PREVIEW) return remotePreviewSnapshot?.runtime || null;
   try {
     const info = previewWindow?.__htmlViewerPreview;
     if (!info || info.session !== projectPreviewSessionId) return null;
@@ -286,13 +185,17 @@ function getProjectPreviewUrlForSiteUrl(urlValue, version = null, siteRoot = get
 
 function getPreviewIframeUrl() {
   if (!previewIframe) return '';
+  if (!previewIframe.getAttribute('sandbox')?.includes('allow-same-origin')) return previewIframe.src || '';
+  if (IS_REMOTE_PREVIEW && previewLifecycle.mode === 'project') {
+    return remotePreviewSnapshot?.sourceUrl || previewLifecycle.expectedNavigation?.url || previewIframe.src || '';
+  }
   try {
     const previewWindow = previewIframe.contentWindow;
     const href = previewWindow?.location?.href || '';
     const info = href && readPreviewRuntimeInfo(previewWindow);
     if (info?.prettyPathname) {
       const current = new URL(href);
-      if (current.origin === location.origin && !getProjectPreviewPathFromUrl(current.href)) {
+      if (current.origin === PREVIEW_ORIGIN && !getProjectPreviewPathFromUrl(current.href)) {
         if (current.pathname === info.prettyPathname) {
           // Same page as served: keep the exact worker URL (`index.html`).
           const source = new URL(info.sourceHref);
@@ -318,7 +221,7 @@ function setProjectPreviewLocation(urlValue, fallbackPath = '') {
   try {
     const url = new URL(urlValue, location.href);
     path = getProjectPreviewPathFromUrl(url.href) || path;
-    if (!path && previewLifecycle.mode === 'project' && url.origin === location.origin) {
+    if (!path && previewLifecycle.mode === 'project' && url.origin === PREVIEW_ORIGIN) {
       path = getProjectPathFromSitePathname(url.pathname);
     }
     search = url.search;
@@ -399,7 +302,7 @@ function syncProjectPreviewNavigationState({ preferExpected = true } = {}) {
   if (!currentPath && previewLifecycle.mode === 'project') {
     try {
       const url = new URL(currentUrl, location.href);
-      if (url.origin === location.origin) {
+      if (url.origin === PREVIEW_ORIGIN) {
         currentPath = getProjectPathFromSitePathname(url.pathname);
       }
     } catch {}
@@ -574,8 +477,7 @@ async function syncProjectPreviewSnapshotNow({ requestId = null, staleRetryCount
     clearSyncedProjectPreviewDirtyState(dirtyEntriesAtStart, dirtySerialAtStart, fullDirtySerialAtStart);
     return true;
   } catch {
-    projectPreviewServiceWorker = null;
-    projectPreviewServiceWorkerPromise = null;
+    projectPreviewTransport.reset();
     projectPreviewNeedsFullSync = true;
     if (staleRetryCount < 1 && (requestId === null || requestId === previewLifecycle.generation)) {
       return syncProjectPreviewSnapshotNow({ requestId, staleRetryCount: staleRetryCount + 1 });

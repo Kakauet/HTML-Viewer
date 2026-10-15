@@ -56,6 +56,27 @@ async function verify(browser, mount, fullCheck, headers, port) {
     for (const lang of ['en', 'es']) {
       await page.goto(lang === 'en' ? base : `${base}es/`, { waitUntil: 'load' });
       await page.waitForFunction(() => typeof monacoLoaded !== 'undefined' && monacoLoaded);
+      // Exercise the workers built from upstream ESM in the published tree.
+      if (lang === 'en') {
+        const ready = await page.evaluate(async () => {
+          const ready = [];
+          for (const label of ['editorWorkerService', 'html', 'css', 'json', 'typescript']) {
+            const worker = await MonacoEnvironment.getWorker('', label);
+            try {
+              await new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error(`Worker timed out: ${label}`)), 15000);
+                worker.onmessage = event => {
+                  if (event.data?.type === 'html-viewer-worker-ready') { clearTimeout(timer); resolve(); }
+                };
+                worker.onerror = event => { clearTimeout(timer); reject(new Error(`${label}: ${event.message}`)); };
+              });
+              ready.push(label);
+            } finally { worker.terminate(); }
+          }
+          return ready;
+        });
+        assert.equal(ready.length, 5, 'Monaco workers failed to load');
+      }
       const frame = page.frameLocator('#preview-iframe');
       async function upload(marker) {
         await page.locator('#file-input').setInputFiles({
@@ -120,7 +141,7 @@ async function verify(browser, mount, fullCheck, headers, port) {
   for (const notice of ['LICENSE', 'THIRD-PARTY-NOTICES.md', 'assets/licenses/Lucide.txt', 'assets/licenses/JSZip.txt', 'assets/licenses/Pako.txt', 'assets/licenses/Pako-zlib.txt']) {
     assert.ok(fs.statSync(path.join(dist, notice)).size > 0, `Missing license: ${notice}`);
   }
-  assert.deepEqual(files.filter(file => file.endsWith('.html')).map(file => path.relative(dist, file).split(path.sep).join('/')).sort(), ['404.html', 'es/index.html', 'index.html', 'preview.html']);
+  assert.deepEqual(files.filter(file => file.endsWith('.html')).map(file => path.relative(dist, file).split(path.sep).join('/')).sort(), ['404.html', 'es/index.html', 'index.html', 'preview-bridge.html', 'preview.html']);
   const browser = await chromium.launch({ headless: true });
   try {
     await verify(browser, configuredMount, true, true, 4186);

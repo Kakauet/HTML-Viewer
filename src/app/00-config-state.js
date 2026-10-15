@@ -537,12 +537,18 @@ const PREVIEW_IDLE_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_RENDERING_LABEL = currentLocale === 'es' ? 'Renderizando' : 'Rendering';
 const PREVIEW_READY_LABEL = currentLocale === 'es' ? 'Listo' : 'Ready';
 const PREVIEW_NOT_FOUND_LABEL = currentLocale === 'es' ? 'No encontrado' : 'Not found';
-const MONACO_VERSION = '0.39.0';
+const MONACO_VERSION = '0.57.0';
+const JSZIP_VERSION = '3.10.2';
 // Resolve lazy libraries from the bundle, not the localized document URL.
 // This also preserves Simple mode when index.html is opened via file://.
 const APP_ROOT_URL = new URL('.', document.currentScript?.src || document.baseURI).href;
-const MONACO_BASE_PATH = new URL(`assets/vendor/monaco-editor/${MONACO_VERSION}/min/vs`, APP_ROOT_URL).href;
-const MONACO_LOADER_PATH = `${MONACO_BASE_PATH}/loader.js`;
+const CONFIGURED_PREVIEW_ORIGIN = document.querySelector('meta[name="html-viewer-preview-origin"]')?.content || '';
+let PREVIEW_ROOT_URL = CONFIGURED_PREVIEW_ORIGIN
+  ? new URL(new URL(APP_ROOT_URL).pathname, CONFIGURED_PREVIEW_ORIGIN).href : APP_ROOT_URL;
+let PREVIEW_ORIGIN = new URL(PREVIEW_ROOT_URL).origin;
+let IS_REMOTE_PREVIEW = PREVIEW_ORIGIN !== new URL(APP_ROOT_URL).origin;
+const MONACO_BASE_PATH = new URL(`assets/vendor/monaco-editor/${MONACO_VERSION}/browser`, APP_ROOT_URL).href;
+const MONACO_LOADER_PATH = `${MONACO_BASE_PATH}/editor.main.js`;
 const MONACO_LOAD_TIMEOUT_MS = 12000;
 const MONACO_RETRY_DELAY_MS = 1200;
 const MONACO_MAX_AUTOMATIC_RETRIES = 1;
@@ -565,7 +571,7 @@ const PREVIEW_HOST_PAGE = 'preview.html';
 const PREVIEW_SANDBOX_TOKENS = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock allow-presentation';
 const PROJECT_PREVIEW_VERSION_PARAM = '__html_viewer_version';
 const PROJECT_PREVIEW_SW_VERSION = '20260811-1';
-const PROJECT_PREVIEW_SW_URL = new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, APP_ROOT_URL).href;
+const PROJECT_PREVIEW_SW_URL = new URL(`preview-sw.js?v=${PROJECT_PREVIEW_SW_VERSION}`, PREVIEW_ROOT_URL).href;
 const PROJECT_PREVIEW_SW_SCOPE = new URL(`${PROJECT_PREVIEW_PREFIX}/`, APP_ROOT_URL).pathname;
 const PROJECT_PREVIEW_SW_READY_TIMEOUT_MS = 1800;
 const PROJECT_PREVIEW_MESSAGE_TIMEOUT_MS = 8000;
@@ -700,8 +706,6 @@ let monacoLoaded = false;
 let editorFontSize = EDITOR_DEFAULT_FONT_SIZE;
 
 let projectPreviewSessionId = getOrCreatePreviewSessionId();
-let projectPreviewServiceWorkerPromise = null;
-let projectPreviewServiceWorker = null;
 let projectPreviewVersion = 0;
 let projectPreviewIssuedVersion = 0;
 let projectPreviewLastUrl = '';

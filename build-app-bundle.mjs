@@ -3,11 +3,13 @@ import { createHash } from 'node:crypto';
 
 const jszipHash = createHash('sha256').update(await readFile('jszip.min.js')).digest('hex').slice(0, 12);
 const workerHash = createHash('sha256').update(await readFile('preview-sw.js')).digest('hex').slice(0, 12);
+const manifest = JSON.parse(await readFile('package.json', 'utf8'));
 
 const sourceFiles = [
   'src/app/00-config-state.js',
   'src/app/01-history.js',
   'src/app/02-file-path-records.js',
+  'src/app/preview-worker-transport.js',
   'src/app/03-project-preview-service-worker.js',
   'src/app/04-models-entry-utils.js',
   'src/app/05-reference-resolution.js',
@@ -27,6 +29,8 @@ const sourceFiles = [
 const sections = await Promise.all(sourceFiles.map(async (file) => {
   let source = await readFile(file, 'utf8');
   if (file.endsWith('/00-config-state.js')) {
+    source = source.replace(/const MONACO_VERSION = '[^']+';/, `const MONACO_VERSION = '${manifest.devDependencies['monaco-editor']}';`);
+    source = source.replace(/const JSZIP_VERSION = '[^']+';/, `const JSZIP_VERSION = '${manifest.devDependencies.jszip}';`);
     source = source.replace(/const PROJECT_PREVIEW_SW_VERSION = '[^']+';/, `const PROJECT_PREVIEW_SW_VERSION = '${workerHash}';`);
   }
   if (file.endsWith('/09-import-export-theme.js')) {

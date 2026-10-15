@@ -302,17 +302,12 @@ function ensureJSZip() {
       }
     };
     script.onerror = () => {
-      const cdnScript = document.createElement('script');
-      cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      cdnScript.onload = () => {
-        if (typeof window.JSZip === 'function') {
-          resolve(window.JSZip);
-        } else {
-          reject(new Error('JSZip not defined after CDN load'));
-        }
-      };
-      cdnScript.onerror = () => reject(new Error('Failed to load JSZip from CDN'));
-      document.head.appendChild(cdnScript);
+      // An ESM fallback cannot be captured by Monaco's global AMD loader.
+      import(`https://cdn.jsdelivr.net/npm/jszip@${JSZIP_VERSION}/+esm`).then(module => {
+        if (typeof module.default !== 'function') throw new Error('JSZip not defined after CDN load');
+        window.JSZip = module.default;
+        resolve(window.JSZip);
+      }).catch(reject);
     };
     document.head.appendChild(script);
   });
